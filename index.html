@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --primary: #003a70;
+      --primary-light: #0056a8;
+      --accent: #d71920;
+      --bg: #f5f7fa;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --white: #ffffff;
+      --border: #e5e7eb;
+      --success: #15803d;
+      --error: #b91c1c;
+      --warning: #b45309;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: var(--white);
+      padding: 16px 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--white); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; flex-shrink: 0;
+    }
+    .brand-text h1 { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; line-height: 1.3; }
+    .brand-text span { font-size: 12px; opacity: 0.85; }
+    .admin-btn {
+      background: rgba(255,255,255,0.15); color: var(--white);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .admin-btn:hover { background: rgba(255,255,255,0.25); }
+    .admin-info { font-size: 12px; text-align: right; line-height: 1.4; }
+    .admin-info strong { display: block; font-size: 13px; }
+
+    /* TABS */
+    .tabs {
+      background: var(--white); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .tabs-inner { display: flex; gap: 4px; }
+    .tab {
+      padding: 14px 20px; font-size: 14px; font-weight: 600;
+      color: var(--muted); border: none; background: transparent;
+      cursor: pointer; font-family: inherit;
+      border-bottom: 3px solid transparent; transition: all 0.15s;
+    }
+    .tab:hover { color: var(--primary); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* MAIN */
+    main { padding: 28px 0 60px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .card h2 { font-size: 20px; color: var(--primary); margin-bottom: 6px; }
+    .card > p.sub { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+
+    /* FORM */
+    .form-row { margin-bottom: 16px; }
+    .form-row label {
+      display: block; font-size: 13px; font-weight: 600;
+      margin-bottom: 6px; color: var(--text);
+    }
+    .form-row input, .form-row select {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      background: #fafbfc; transition: all 0.15s;
+    }
+    .form-row input:focus {
+      outline: none; border-color: var(--primary-light);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(0,86,168,0.1);
+    }
+
+    .location-box {
+      background: #f0f6fc; border: 1px solid #cfe2f3;
+      border-radius: 10px; padding: 14px; font-size: 13px;
+      margin: 8px 0 20px; line-height: 1.6;
+    }
+    .location-box .row { display: flex; justify-content: space-between; gap: 12px; }
+    .location-box .label { color: var(--muted); }
+    .location-box .value { font-weight: 600; font-family: 'Courier New', monospace; }
+    .status-pill {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+    }
+    .pill-ok { background: #d1fae5; color: var(--success); }
+    .pill-fail { background: #fee2e2; color: var(--error); }
+    .pill-wait { background: #fef3c7; color: var(--warning); }
+
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 22px; border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; flex: 1; min-width: 140px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: var(--white); }
+    .btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,58,112,0.3); }
+    .btn-outline { background: var(--white); color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-outline:not(:disabled):hover { background: #f0f6fc; }
+
+    .alert {
+      padding: 12px 14px; border-radius: 10px; font-size: 13px;
+      margin-bottom: 16px; display: none; line-height: 1.5;
+    }
+    .alert.show { display: block; }
+    .alert-error { background: #fef2f2; color: var(--error); border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
+    .alert-warning { background: #fffbeb; color: var(--warning); border: 1px solid #fde68a; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; margin-top: 20px; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+    th {
+      background: #f4f7fb; color: var(--primary);
+      text-align: left; padding: 12px 14px; font-weight: 700;
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .empty {
+      text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px;
+    }
+    .cell-mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 14px; padding: 32px;
+      width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+    .modal h3 { color: var(--primary); font-size: 18px; margin-bottom: 4px; }
+    .modal p.sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .modal-close {
+      float: right; background: none; border: none; font-size: 22px;
+      cursor: pointer; color: var(--muted); line-height: 1;
+    }
+
+    /* CONFIG WARNING */
+    .config-warn {
+      background: #fffbeb; border: 1px solid #fde68a; color: var(--warning);
+      padding: 12px 16px; border-radius: 10px; font-size: 13px;
+      margin-bottom: 20px; line-height: 1.6;
+    }
+    .config-warn code {
+      background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 640px) {
+      .card { padding: 20px; }
+      .brand-text h1 { font-size: 13px; }
+      .brand-logo { width: 40px; height: 40px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-logo">USSH</div>
+        <div class="brand-text">
+          <h1>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</h1>
+          <span>Sky One · Hệ thống chấm công nhân viên vệ sinh</span>
+        </div>
+      </div>
+
+      <div id="headerAdmin">
+        <button class="admin-btn" id="btnOpenAdminLogin">Đăng nhập Admin</button>
+      </div>
+      <div id="headerAdminInfo" style="display:none;">
+        <div class="admin-info">
+          <strong id="adminEmailLabel"></strong>
+          <button class="admin-btn" id="btnLogout" style="margin-top:6px;">Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <div class="container tabs-inner">
+      <button class="tab active" data-tab="attendance">Chấm công</button>
+      <button class="tab" data-tab="adminView" id="tabAdminView" style="display:none;">Xem chấm công</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main>
+    <div class="container">
+
+      <!-- TAB 1: CHẤM CÔNG -->
+      <section id="panel-attendance" class="tab-panel active">
+        <div class="card" style="max-width:560px;margin:0 auto;">
+          <h2>Chấm công</h2>
+          <p class="sub">Nhập họ tên và mã nhân viên, sau đó chấm công khi đang ở trong phạm vi trường.</p>
+
+          <div id="configWarn" class="config-warn" style="display:none;"></div>
+
+          <div id="alertAttend" class="alert"></div>
+
+          <form id="attendForm" autocomplete="off">
+            <div class="form-row">
+              <label for="empName">Họ và tên <span style="color:var(--accent)">*</span></label>
+              <input type="text" id="empName" placeholder="Ví dụ: Nguyễn Văn A" required />
+            </div>
+            <div class="form-row">
+              <label for="empId">Mã nhân viên <span style="color:var(--accent)">*</span></label>
+              <input type="text" id="empId" placeholder="Mã do Sky One cấp" required />
+            </div>
+
+            <div class="location-box" id="locationBox">
+              <div class="row"><span class="label">Trạng thái định vị:</span><span id="locStatus" class="status-pill pill-wait">Chưa lấy vị trí</span></div>
+              <div class="row" style="margin-top:6px;"><span class="label">Tọa độ hiện tại:</span><span class="value" id="locCoords">—</span></div>
+              <div class="row" style="margin-top:6px;"><span class="label">Khoảng cách tới trường:</span><span class="value" id="locDistance">—</span></div>
+              <div style="margin-top:10px;">
+                <button type="button" class="btn btn-outline" id="btnGetLocation" style="width:100%;">📍 Lấy vị trí hiện tại</button>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="btn btn-primary" id="btnCheckin" disabled>Check-in</button>
+              <button type="button" class="btn btn-outline" id="btnCheckout" disabled>Check-out</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- TAB 2: ADMIN VIEW -->
+      <section id="panel-adminView" class="tab-panel">
+        <div class="card">
+          <h2>Bảng chấm công theo ngày</h2>
+          <p class="sub">Chỉ admin xem được. Chọn ngày để xem dữ liệu chấm công của toàn bộ nhân viên.</p>
+
+          <div id="alertAdmin" class="alert"></div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-row" style="margin:0;flex:1;min-width:200px;">
+              <label for="adminDate">Chọn ngày</label>
+              <input type="date" id="adminDate" />
+            </div>
+            <button class="btn btn-primary" id="btnLoadData" style="flex:0;min-width:140px;">Xem dữ liệu</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:50px;">STT</th>
+                  <th>Họ tên</th>
+                  <th>Mã NV</th>
+                  <th>Giờ vào</th>
+                  <th>Vị trí vào</th>
+                  <th>Giờ ra</th>
+                  <th>Vị trí ra</th>
+                </tr>
+              </thead>
+              <tbody id="adminTableBody">
+                <tr><td colspan="7" class="empty">Chưa có dữ liệu. Chọn ngày và bấm "Xem dữ liệu".</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL ĐĂNG NHẬP ADMIN -->
+  <div class="modal-overlay" id="adminLoginModal">
+    <div class="modal">
+      <button class="modal-close" id="btnCloseAdminLogin">×</button>
+      <h3>Đăng nhập Admin</h3>
+      <p class="sub">Chỉ tài khoản admin được cấp bởi Sky One / nhà trường mới xem được dữ liệu chấm công.</p>
+
+      <div id="alertLogin" class="alert"></div>
+
+      <form id="adminLoginForm">
+        <div class="form-row">
+          <label for="adminEmail">Email</label>
+          <input type="email" id="adminEmail" placeholder="admin@..." required />
+        </div>
+        <div class="form-row">
+          <label for="adminPassword">Mật khẩu</label>
+          <input type="password" id="adminPassword" required />
+        </div>
+        <button type="submit" class="btn btn-primary" id="btnAdminLogin" style="width:100%;">Đăng nhập</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       CẤU HÌNH SUPABASE
+       ========================================================= */
+    const SUPABASE_URL      = 'https://wosgbrafpbigmbhhodov.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvc2dicmFmcGJpZ21iaGhvZG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMzgxNTksImV4cCI6MjEwOTcxNDE1OX0.KZ17Pgpaz7POXZ5K606Gb4obPOiw7TGMOLrYUvQg1NE';
+
+    /* =========================================================
+       CẤU HÌNH VỊ TRÍ TRƯỜNG
+       → BẠN TỰ ĐIỀN:
+         - Mở Google Maps
+         - Chuột phải vào đúng cổng trường / vị trí làm việc
+         - Copy cặp số (vĩ độ, kinh độ) hiện ra
+       ========================================================= */
+    const UNIVERSITY_LOCATION = {
+      lat: null,            // TODO: điền vĩ độ (number)
+      lng: null,            // TODO: điền kinh độ (number)
+      radiusMeters: 200     // TODO: chỉnh bán kính cho phép (mét)
+    };
+
+    /* =========================================================
+       KHỞI TẠO
+       ========================================================= */
+    const configOK =
+      !SUPABASE_URL.includes('YOUR-PROJECT') &&
+      !SUPABASE_ANON_KEY.includes('YOUR-ANON-KEY');
+    const locationOK =
+      typeof UNIVERSITY_LOCATION.lat === 'number' &&
+      typeof UNIVERSITY_LOCATION.lng === 'number';
+
+    const supabaseClient = configOK
+      ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
+    if (!locationOK) {
+      const w = document.getElementById('configWarn');
+      w.style.display = 'block';
+      w.innerHTML =
+        '<strong>Chưa cấu hình vị trí trường.</strong><br>' +
+        'Thiếu <code>UNIVERSITY_LOCATION.lat</code> / <code>lng</code> trong file. ' +
+        'Nút Check-in/Check-out sẽ bị khoá cho tới khi bạn điền.';
+    }
+
+    /* =========================================================
+       HELPERS
+       ========================================================= */
+    function showAlert(el, msg, type) {
+      el.textContent = msg;
+      el.className = 'alert show alert-' + (type || 'error');
+    }
+    function hideAlert(el) { el.className = 'alert'; }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = d => (d * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function todayISO() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtCoord(lat, lng) {
+      if (lat == null || lng == null) return '—';
+      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+      }[m]));
+    }
+
+    /* =========================================================
+       TABS
+       ========================================================= */
+    const tabs = document.querySelectorAll('.tab');
+    const panels = {
+      attendance: document.getElementById('panel-attendance'),
+      adminView: document.getElementById('panel-adminView'),
+    };
+    function switchTab(name) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      Object.entries(panels).forEach(([k, el]) =>
+        el.classList.toggle('active', k === name)
+      );
+      if (name === 'adminView') {
+        const d = document.getElementById('adminDate');
+        if (!d.value) d.value = todayISO();
+      }
+    }
+    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+    /* =========================================================
+       TAB 1 — CHẤM CÔNG
+       ========================================================= */
+    const alertAttend   = document.getElementById('alertAttend');
+    const locStatusEl   = document.getElementById('locStatus');
+    const locCoordsEl   = document.getElementById('locCoords');
+    const locDistEl     = document.getElementById('locDistance');
+    const btnGetLoc     = document.getElementById('btnGetLocation');
+    const btnCheckin    = document.getElementById('btnCheckin');
+    const btnCheckout   = document.getElementById('btnCheckout');
+
+    let currentPos = null;
+    let distanceToSchool = null;
+    let inRange = false;
+
+    function updateLocationUI() {
+      if (!currentPos) {
+        locStatusEl.className = 'status-pill pill-wait';
+        locStatusEl.textContent = 'Chưa lấy vị trí';
+        return;
+      }
+      locCoordsEl.textContent = fmtCoord(currentPos.lat, currentPos.lng);
+
+      if (!locationOK) {
+        locStatusEl.className = 'status-pill pill-fail';
+        locStatusEl.textContent = 'Chưa cấu hình vị trí trường';
+        locDistEl.textContent = '—';
+        btnCheckin.disabled = true;
+        btnCheckout.disabled = true;
+        return;
+      }
+
+      distanceToSchool = haversine(
+        currentPos.lat, currentPos.lng,
+        UNIVERSITY_LOCATION.lat, UNIVERSITY_LOCATION.lng
+      );
+      locDistEl.textContent = distanceToSchool.toFixed(0) + ' m (bán kính ' +
+        UNIVERSITY_LOCATION.radiusMeters + ' m)';
+
+      inRange = distanceToSchool <= UNIVERSITY_LOCATION.radiusMeters;
+      if (inRange) {
+        locStatusEl.className = 'status-pill pill-ok';
+        locStatusEl.textContent = '✅ Trong phạm vi';
+      } else {
+        locStatusEl.className = 'status-pill pill-fail';
+        locStatusEl.textContent = '❌ Ngoài phạm vi';
+      }
+
+      const canSubmit = inRange && configOK;
+      btnCheckin.disabled  = !canSubmit;
+      btnCheckout.disabled = !canSubmit;
+    }
+
+    btnGetLoc.addEventListener('click', () => {
+      hideAlert(alertAttend);
+      if (!navigator.geolocation) {
+        showAlert(alertAttend, 'Trình duyệt không hỗ trợ định vị.', 'error');
+        return;
+      }
+      locStatusEl.className = 'status-pill pill-wait';
+      locStatusEl.textContent = 'Đang lấy vị trí...';
+      btnGetLoc.disabled = true;
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          currentPos = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          };
+          updateLocationUI();
+          btnGetLoc.disabled = false;
+        },
+        (err) => {
+          let msg = 'Không lấy được vị trí.';
+          if (err.code === err.PERMISSION_DENIED)
+            msg = 'Bạn đã từ chối quyền định vị. Hãy bật lại trong cài đặt trình duyệt.';
+          else if (err.code === err.POSITION_UNAVAILABLE)
+            msg = 'Không xác định được vị trí. Kiểm tra GPS / mạng.';
+          else if (err.code === err.TIMEOUT)
+            msg = 'Hết thời gian chờ định vị. Thử lại.';
+          showAlert(alertAttend, msg, 'error');
+          locStatusEl.className = 'status-pill pill-fail';
+          locStatusEl.textContent = 'Lỗi định vị';
+          btnGetLoc.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    });
+
+    btnCheckin.disabled = true;
+    btnCheckout.disabled = true;
+
+    document.getElementById('attendForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert(alertAttend);
+
+      const name = document.getElementById('empName').value.trim();
+      const id   = document.getElementById('empId').value.trim();
+
+      if (!name || !id) {
+        showAlert(alertAttend, 'Vui lòng nhập họ tên và mã nhân viên.', 'error');
+        return;
+      }
+      if (!currentPos || !inRange) {
+        showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
+        return;
+      }
+      if (!configOK) {
+        showAlert(alertAttend, 'Chưa cấu hình Supabase — không thể lưu dữ liệu.', 'error');
+        return;
+      }
+
+      btnCheckin.disabled = true;
+      btnCheckin.textContent = 'Đang lưu...';
+
+      try {
+        const today = todayISO();
+
+        const { data: existing, error: qErr } = await supabaseClient
+          .from('attendance')
+          .select('id, check_in_time, check_out_time')
+          .eq('employee_id', id)
+          .eq('work_date', today)
+          .order('check_in_time', { ascending: false })
+          .limit(1);
+
+        if (qErr) throw qErr;
+
+        if (existing && existing.length > 0) {
+          showAlert(alertAttend, 'Nhân viên này đã check-in hôm nay rồi.', 'warning');
+          return;
+        }
+
+        const { error: insErr } = await supabaseClient.from('attendance').insert({
+          employee_name: name,
+          employee_id: id,
+          work_date: today,
+          check_in_time: new Date().toISOString(),
+          check_in_lat: currentPos.lat,
+          check_in_lng: currentPos.lng,
+          check_in_distance: distanceToSchool,
+        });
+
+        if (insErr) throw insErr;
+
+        showAlert(alertAttend, '✅ Check-in thành công lúc ' +
+          new Date().toLocaleTimeString('vi-VN') + '.', 'success');
+      } catch (err) {
+        console.error(err);
+        showAlert(alertAttend, 'Lỗi check-in: ' + (err.message || err), 'error');
+      } finally {
+        btnCheckin.textContent = 'Check-in';
+        btnCheckin.disabled = !inRange || !configOK;
+      }
+    });
+
+    btnCheckout.addEventListener('click', async () => {
+      hideAlert(alertAttend);
+
+      const id = document.getElementById('empId').value.trim();
+
+      if (!id) {
+        showAlert(alertAttend, 'Vui lòng nhập mã nhân viên.', 'error');
+        return;
+      }
+      if (!currentPos || !inRange) {
+        showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
+        return;
+      }
+      if (!configOK) {
+        showAlert(alertAttend, 'Chưa cấu hình Supabase — không thể lưu dữ liệu.', 'error');
+        return;
+      }
+
+      btnCheckout.disabled = true;
+      btnCheckout.textContent = 'Đang lưu...';
+
+      try {
+        const today = todayISO();
+
+        const { data: rows, error: qErr } = await supabaseClient
+          .from('attendance')
+          .select('id, check_out_time')
+          .eq('employee_id', id)
+          .eq('work_date', today)
+          .order('check_in_time', { ascending: false })
+          .limit(1);
+
+        if (qErr) throw qErr;
+        if (!rows || rows.length === 0) {
+          showAlert(alertAttend, 'Không tìm thấy lượt check-in hôm nay của mã NV này.', 'error');
+          return;
+        }
+        if (rows[0].check_out_time) {
+          showAlert(alertAttend, 'Nhân viên này đã check-out hôm nay rồi.', 'warning');
+          return;
+        }
+
+        const { error: upErr } = await supabaseClient
+          .from('attendance')
+          .update({
+            check_out_time: new Date().toISOString(),
+            check_out_lat: currentPos.lat,
+            check_out_lng: currentPos.lng,
+            check_out_distance: distanceToSchool,
+          })
+          .eq('id', rows[0].id);
+
+        if (upErr) throw upErr;
+
+        showAlert(alertAttend, '✅ Check-out thành công lúc ' +
+          new Date().toLocaleTimeString('vi-VN') + '.', 'success');
+      } catch (err) {
+        console.error(err);
+        showAlert(alertAttend, 'Lỗi check-out: ' + (err.message || err), 'error');
+      } finally {
+        btnCheckout.textContent = 'Check-out';
+        btnCheckout.disabled = !inRange || !configOK;
+      }
+    });
+
+    /* =========================================================
+       ADMIN LOGIN
+       ========================================================= */
+    const modal         = document.getElementById('adminLoginModal');
+    const btnOpenLogin  = document.getElementById('btnOpenAdminLogin');
+    const btnCloseLogin = document.getElementById('btnCloseAdminLogin');
+    const loginForm     = document.getElementById('adminLoginForm');
+    const alertLogin    = document.getElementById('alertLogin');
+    const headerAdmin   = document.getElementById('headerAdmin');
+    const headerInfo    = document.getElementById('headerAdminInfo');
+    const adminEmailLbl = document.getElementById('adminEmailLabel');
+    const tabAdminView  = document.getElementById('tabAdminView');
+
+    btnOpenLogin.addEventListener('click', () => modal.classList.add('show'));
+    btnCloseLogin.addEventListener('click', () => modal.classList.remove('show'));
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('show');
+    });
+
+    function setAdminUI(isAdmin, email) {
+      if (isAdmin) {
+        headerAdmin.style.display = 'none';
+        headerInfo.style.display = 'block';
+        adminEmailLbl.textContent = email || '';
+        tabAdminView.style.display = 'inline-block';
+      } else {
+        headerAdmin.style.display = 'block';
+        headerInfo.style.display = 'none';
+        tabAdminView.style.display = 'none';
+        if (panels.adminView.classList.contains('active')) switchTab('attendance');
+      }
+    }
+
+    async function checkAdminStatus() {
+      if (!supabaseClient) return;
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { setAdminUI(false); return; }
+
+      const { data, error } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (error || !data || data.role !== 'admin') {
+        setAdminUI(false);
+        return;
+      }
+      setAdminUI(true, session.user.email);
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert(alertLogin);
+
+      if (!configOK) {
+        showAlert(alertLogin, 'Chưa cấu hình Supabase.', 'error');
+        return;
+      }
+
+      const email    = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      const btn      = document.getElementById('btnAdminLogin');
+
+      btn.disabled = true;
+      btn.textContent = 'Đang đăng nhập...';
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        const { data: roleRow, error: roleErr } = await supabaseClient
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+
+        if (roleErr || !roleRow || roleRow.role !== 'admin') {
+          await supabaseClient.auth.signOut();
+          throw new Error('Tài khoản này không có quyền admin.');
+        }
+
+        setAdminUI(true, data.user.email);
+        modal.classList.remove('show');
+        document.getElementById('adminEmail').value = '';
+        document.getElementById('adminPassword').value = '';
+        switchTab('adminView');
+      } catch (err) {
+        console.error(err);
+        showAlert(alertLogin, err.message || 'Đăng nhập thất bại.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Đăng nhập';
+      }
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', async () => {
+      if (supabaseClient) await supabaseClient.auth.signOut();
+      setAdminUI(false);
+    });
+
+    /* =========================================================
+       ADMIN VIEW — XEM DỮ LIỆU THEO NGÀY
+       ========================================================= */
+    const adminDate   = document.getElementById('adminDate');
+    const btnLoadData = document.getElementById('btnLoadData');
+    const adminTbody  = document.getElementById('adminTableBody');
+    const alertAdmin  = document.getElementById('alertAdmin');
+
+    adminDate.value = todayISO();
+
+    btnLoadData.addEventListener('click', async () => {
+      hideAlert(alertAdmin);
+
+      const date = adminDate.value;
+      if (!date) {
+        showAlert(alertAdmin, 'Vui lòng chọn ngày.', 'error');
+        return;
+      }
+      if (!configOK) {
+        showAlert(alertAdmin, 'Chưa cấu hình Supabase.', 'error');
+        return;
+      }
+
+      btnLoadData.disabled = true;
+      btnLoadData.textContent = 'Đang tải...';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('attendance')
+          .select('*')
+          .eq('work_date', date)
+          .order('check_in_time', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          adminTbody.innerHTML =
+            '<tr><td colspan="7" class="empty">Không có dữ liệu chấm công cho ngày này.</td></tr>';
+          return;
+        }
+
+        adminTbody.innerHTML = data.map((row, i) => {
+          const inPos  = row.check_in_lat != null
+            ? `<div class="cell-mono">${fmtCoord(row.check_in_lat, row.check_in_lng)}</div>
+               <div class="cell-mono">${row.check_in_distance != null ? Math.round(row.check_in_distance) + ' m' : ''}</div>`
+            : '—';
+          const outPos = row.check_out_lat != null
+            ? `<div class="cell-mono">${fmtCoord(row.check_out_lat, row.check_out_lng)}</div>
+               <div class="cell-mono">${row.check_out_distance != null ? Math.round(row.check_out_distance) + ' m' : ''}</div>`
+            : '—';
+
+          return `
+            <tr>
+              <td>${i + 1}</td>
+              <td><strong>${escapeHtml(row.employee_name)}</strong></td>
+              <td>${escapeHtml(row.employee_id || '')}</td>
+              <td>${fmtTime(row.check_in_time)}</td>
+              <td>${inPos}</td>
+              <td>${fmtTime(row.check_out_time)}</td>
+              <td>${outPos}</td>
+            </tr>`;
+        }).join('');
+      } catch (err) {
+        console.error(err);
+        showAlert(alertAdmin, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
+        adminTbody.innerHTML =
+          '<tr><td colspan="7" class="empty">Lỗi tải dữ liệu.</td></tr>';
+      } finally {
+        btnLoadData.disabled = false;
+        btnLoadData.textContent = 'Xem dữ liệu';
+      }
+    });
+
+    /* =========================================================
+       KHỞI CHẠY
+       ========================================================= */
+    (async () => {
+      await checkAdminStatus();
+
+      if (supabaseClient) {
+        supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+          if (!session) { setAdminUI(false); return; }
+          const { data } = await supabaseClient
+            .from('user_roles').select('role')
+            .eq('user_id', session.user.id).maybeSingle();
+          if (data && data.role === 'admin') setAdminUI(true, session.user.email);
+          else setAdminUI(false);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
