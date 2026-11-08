@@ -9,344 +9,780 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    /* ============ DESIGN TOKENS ============ */
     :root {
-      --primary: #003a70;
-      --primary-light: #0056a8;
-      --accent: #d71920;
-      --bg: #f5f7fa;
-      --text: #1a1a1a;
-      --muted: #6b7280;
-      --white: #ffffff;
-      --border: #e5e7eb;
-      --success: #15803d;
-      --error: #b91c1c;
-      --warning: #b45309;
+      --primary: #0F3D5C;
+      --primary-hover: #0A2D45;
+      --primary-light: #1E5A7F;
+      --accent: #F4B400;
+      --bg: #F8FAFB;
+      --surface: #FFFFFF;
+      --text: #1A2B3C;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --border-strong: #CBD5E1;
+      --success: #059669;
+      --success-bg: #ECFDF5;
+      --error: #DC2626;
+      --error-bg: #FEF2F2;
+      --warning: #D97706;
+      --warning-bg: #FFFBEB;
+      --info-bg: #EFF6FF;
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(15, 61, 92, 0.04);
+      --shadow: 0 2px 8px rgba(15, 61, 92, 0.06);
+      --shadow-lg: 0 8px 24px rgba(15, 61, 92, 0.1);
     }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* ===== FIX 1: KHOÁ KHUNG TRANG — không scroll ngang ===== */
     html {
       overflow-x: hidden;
       width: 100%;
       max-width: 100vw;
     }
     body {
-      font-family: 'Be Vietnam Pro', sans-serif;
+      font-family: 'Be Vietnam Pro', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
       min-height: 100vh;
       overflow-x: hidden;
       width: 100%;
       max-width: 100vw;
-      position: relative;
-      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
     }
-    #app-root {
-      width: 100%;
-      max-width: 100vw;
-      overflow-x: hidden;
-    }
+
     .container {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 0 20px;
       width: 100%;
     }
 
-    /* HEADER */
-    header {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      color: var(--white);
-      padding: 16px 0;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-    }
-    .header-inner {
-      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-    }
-    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
-    .brand-logo {
-      width: 48px; height: 48px; border-radius: 50%;
-      background: var(--white); color: var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 16px; flex-shrink: 0;
-    }
-    .brand-text { min-width: 0; }
-    .brand-text h1 { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; line-height: 1.3; }
-    .brand-text span { font-size: 12px; opacity: 0.85; }
-    .admin-btn {
-      background: rgba(255,255,255,0.15); color: var(--white);
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
-      cursor: pointer; font-family: inherit; white-space: nowrap;
-    }
-    .admin-btn:hover { background: rgba(255,255,255,0.25); }
-    .admin-info { font-size: 12px; text-align: right; line-height: 1.4; }
-    .admin-info strong { display: block; font-size: 13px; word-break: break-all; }
+    /* ============ SCREENS ============ */
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: block; }
 
-    /* TABS */
-    .tabs {
-      background: var(--white); border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 50;
+    /* ============ LOGIN SCREEN ============ */
+    #screen-login {
+      display: none;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0F3D5C 0%, #0A2D45 100%);
+      position: relative;
+      overflow: hidden;
     }
-    .tabs-inner { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .tabs-inner::-webkit-scrollbar { display: none; }
+    #screen-login.active { display: flex; }
+    #screen-login::before {
+      content: '';
+      position: absolute;
+      top: -200px; right: -200px;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(244,180,0,0.12) 0%, transparent 70%);
+    }
+    #screen-login::after {
+      content: '';
+      position: absolute;
+      bottom: -200px; left: -200px;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(30,90,127,0.4) 0%, transparent 70%);
+    }
+
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+      margin: auto;
+      padding: 32px 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-brand {
+      text-align: center;
+      margin-bottom: 32px;
+      color: #fff;
+    }
+    .brand-mark {
+      width: 64px; height: 64px;
+      margin: 0 auto 16px;
+      background: #fff;
+      color: var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .login-brand h1 {
+      font-size: 17px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+    .login-brand p {
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    .login-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+    .login-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .login-card .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .login-footer {
+      text-align: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      margin-top: 24px;
+    }
+
+    /* ============ FORM ELEMENTS ============ */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      background: #FAFBFC;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
+    }
+    .field input::placeholder { color: #94A3B8; }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      margin: 4px 0 20px;
+      user-select: none;
+    }
+    .checkbox input {
+      width: 16px; height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* ============ BUTTONS ============ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:not(:disabled):hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(15,61,92,0.25);
+    }
+    .btn-outline {
+      background: #fff;
+      color: var(--primary);
+      border: 1.5px solid var(--border-strong);
+    }
+    .btn-outline:not(:disabled):hover {
+      border-color: var(--primary);
+      background: #F0F6FC;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .btn-ghost:hover {
+      color: var(--primary);
+      background: rgba(15,61,92,0.05);
+    }
+    .btn-danger {
+      background: #fff;
+      color: var(--error);
+      border: 1.5px solid #FCA5A5;
+    }
+    .btn-danger:not(:disabled):hover { background: var(--error-bg); }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ============ ALERTS ============ */
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert.show { display: block; }
+    .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #FECACA; }
+    .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid #A7F3D0; }
+    .alert-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid #FDE68A; }
+    .alert-info { background: var(--info-bg); color: var(--primary-light); border: 1px solid #BFDBFE; }
+
+    /* ============ APP HEADER (sau khi đăng nhập) ============ */
+    .app-header {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .brand-mark-sm {
+      width: 40px; height: 40px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      flex-shrink: 0;
+      letter-spacing: 0.3px;
+    }
+    .app-brand div { min-width: 0; }
+    .app-brand strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.3;
+    }
+    .app-brand small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .app-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 0;
+    }
+    .app-user span {
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ============ APP TABS ============ */
+    .app-tabs {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 64px;
+      z-index: 90;
+    }
+    .app-tabs .container {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .app-tabs .container::-webkit-scrollbar { display: none; }
     .tab {
-      padding: 14px 20px; font-size: 14px; font-weight: 600;
-      color: var(--muted); border: none; background: transparent;
-      cursor: pointer; font-family: inherit; white-space: nowrap;
-      border-bottom: 3px solid transparent; transition: all 0.15s;
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      border-bottom: 2.5px solid transparent;
+      transition: all 0.15s;
+      margin-bottom: -1px;
     }
     .tab:hover { color: var(--primary); }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    /* MAIN */
-    main { padding: 28px 0 60px; }
+    /* ============ MAIN CONTENT ============ */
+    .app-main {
+      padding: 24px 0 60px;
+    }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
     .card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 14px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
       max-width: 100%;
     }
-    .card h2 { font-size: 20px; color: var(--primary); margin-bottom: 6px; }
-    .card h3 { font-size: 16px; color: var(--primary); margin-bottom: 6px; }
-    .card > p.sub { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
-
-    /* FORM */
-    .form-row { margin-bottom: 16px; }
-    .form-row label {
-      display: block; font-size: 13px; font-weight: 600;
-      margin-bottom: 6px; color: var(--text);
+    .card + .card { margin-top: 16px; }
+    .card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
     }
-    .form-row input, .form-row select {
-      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
-      border-radius: 10px; font-size: 14px; font-family: inherit;
-      background: #fafbfc; transition: all 0.15s;
+    .card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
     }
-    .form-row input:focus {
-      outline: none; border-color: var(--primary-light);
-      background: var(--white);
-      box-shadow: 0 0 0 3px rgba(0,86,168,0.1);
+    .card > .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
     }
 
-    .location-box {
-      background: #f0f6fc; border: 1px solid #cfe2f3;
-      border-radius: 10px; padding: 14px; font-size: 13px;
-      margin: 8px 0 20px; line-height: 1.6;
-    }
-    .location-box .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .location-box .label { color: var(--muted); }
-    .location-box .value { font-weight: 600; font-family: 'Courier New', monospace; word-break: break-all; }
-    .status-pill {
-      display: inline-block; padding: 4px 12px; border-radius: 999px;
-      font-size: 12px; font-weight: 600;
-    }
-    .pill-ok { background: #d1fae5; color: var(--success); }
-    .pill-fail { background: #fee2e2; color: var(--error); }
-    .pill-wait { background: #fef3c7; color: var(--warning); }
-
-    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
-    .btn {
-      padding: 12px 22px; border-radius: 10px; border: none;
-      font-size: 14px; font-weight: 600; font-family: inherit;
-      cursor: pointer; transition: all 0.15s; flex: 1; min-width: 140px;
-    }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: var(--white); }
-    .btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,58,112,0.3); }
-    .btn-outline { background: var(--white); color: var(--primary); border: 1.5px solid var(--primary); }
-    .btn-outline:not(:disabled):hover { background: #f0f6fc; }
-    .btn-danger { background: var(--white); color: var(--error); border: 1.5px solid var(--error); }
-    .btn-danger:not(:disabled):hover { background: #fef2f2; }
-
-    .alert {
-      padding: 12px 14px; border-radius: 10px; font-size: 13px;
-      margin-bottom: 16px; display: none; line-height: 1.5;
-    }
-    .alert.show { display: block; }
-    .alert-error { background: #fef2f2; color: var(--error); border: 1px solid #fecaca; }
-    .alert-success { background: #f0fdf4; color: var(--success); border: 1px solid #bbf7d0; }
-    .alert-warning { background: #fffbeb; color: var(--warning); border: 1px solid #fde68a; }
-
-    /* TABLE */
-    .table-wrap {
-      overflow-x: auto; -webkit-overflow-scrolling: touch;
-      margin-top: 20px; border-radius: 10px; border: 1px solid var(--border);
-      max-width: 100%;
-    }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
-    th {
-      background: #f4f7fb; color: var(--primary);
-      text-align: left; padding: 12px 14px; font-weight: 700;
-      font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px;
-      border-bottom: 1px solid var(--border); white-space: nowrap;
-    }
-    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbfc; }
-    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
-    .cell-mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); }
-    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .row-actions .btn { flex: none; min-width: auto; padding: 6px 10px; font-size: 12px; }
-
-    /* MODAL */
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      display: none; align-items: center; justify-content: center;
-      z-index: 200; padding: 20px; overflow-y: auto;
-    }
-    .modal-overlay.show { display: flex; }
-    .modal {
-      background: var(--white); border-radius: 14px; padding: 32px;
-      width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-      margin: auto;
-    }
-    .modal h3 { color: var(--primary); font-size: 18px; margin-bottom: 4px; }
-    .modal p.sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .modal-close {
-      float: right; background: none; border: none; font-size: 22px;
-      cursor: pointer; color: var(--muted); line-height: 1;
-    }
-
-    .config-warn {
-      background: #fffbeb; border: 1px solid #fde68a; color: var(--warning);
-      padding: 12px 16px; border-radius: 10px; font-size: 13px;
-      margin-bottom: 20px; line-height: 1.6;
-    }
-    .config-warn code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-
-    .divider-section { height: 1px; background: var(--border); margin: 24px 0; }
-
-    .add-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
+    /* ============ EMPLOYEE HERO ============ */
+    .employee-hero {
+      text-align: center;
+      padding: 32px 24px 24px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 16px;
     }
-    .add-grid .form-row { margin: 0; }
+    .employee-greeting {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .employee-greeting strong {
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .status-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 20px auto;
+      transition: all 0.3s;
+    }
+    .status-icon.waiting { background: #F1F5F9; }
+    .status-icon.loading { background: #FEF3C7; animation: pulse 1.5s infinite; }
+    .status-icon.success { background: var(--success-bg); }
+    .status-icon.error { background: var(--error-bg); }
+    .status-icon.warning { background: var(--warning-bg); }
 
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .status-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+    .status-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 1.55;
+    }
+
+    /* ============ INFO GRID ============ */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      padding: 16px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 16px;
+    }
+    .info-item { min-width: 0; }
+    .info-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .info-value.mono {
+      font-family: 'SF Mono', 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    /* ============ TABLE ============ */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 640px;
+    }
+    th {
+      background: #F8FAFC;
+      color: var(--text-muted);
+      text-align: left;
+      padding: 11px 14px;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FAFBFC; }
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .cell-mono {
+      font-family: 'SF Mono', 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ============ PILLS ============ */
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pill-ok { background: var(--success-bg); color: var(--success); }
+    .pill-fail { background: var(--error-bg); color: var(--error); }
+    .pill-wait { background: var(--warning-bg); color: var(--warning); }
+
+    /* ============ FORM GRID ============ */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .form-grid .field { margin: 0; }
+
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    /* ============ LOCATION BOX ============ */
+    .location-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .location-box .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 3px 0;
+    }
+    .location-box .label { color: var(--text-muted); }
+    .location-box .value {
+      font-weight: 600;
+      font-family: 'SF Mono', 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    /* ============ RESPONSIVE ============ */
     @media (max-width: 640px) {
-      .card { padding: 20px; }
-      .brand-text h1 { font-size: 13px; }
-      .brand-logo { width: 40px; height: 40px; font-size: 14px; }
       .container { padding: 0 14px; }
-      .header-inner { gap: 10px; }
+      .login-card { padding: 24px; }
+      .login-brand h1 { font-size: 15px; }
+      .brand-mark { width: 56px; height: 56px; font-size: 17px; }
+      .card { padding: 18px; }
+      .employee-hero { padding: 24px 18px 18px; }
+      .status-icon { width: 64px; height: 64px; font-size: 28px; }
+      .status-title { font-size: 16px; }
+      .app-header .container { gap: 10px; }
+      .app-user span { max-width: 120px; }
+      .app-tabs { top: 56px; }
+      .tab { padding: 12px 14px; font-size: 12px; }
     }
   </style>
 </head>
 <body>
-<div id="app-root">
 
-  <header>
-    <div class="container header-inner">
-      <div class="brand">
-        <div class="brand-logo">USSH</div>
-        <div class="brand-text">
-          <h1>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</h1>
-          <span>Sky One · Hệ thống chấm công nhân viên vệ sinh</span>
+<!-- ======================================================
+     SCREEN 1: LOGIN
+     ====================================================== -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrapper">
+    <div class="login-brand">
+      <div class="brand-mark">USSH</div>
+      <h1>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</h1>
+      <p>Hệ thống chấm công nội bộ · Sky One</p>
+    </div>
+
+    <div class="login-card">
+      <h2>Đăng nhập</h2>
+      <p class="subtitle">Nhập tên đăng nhập và mật khẩu được cấp</p>
+
+      <div id="loginAlert" class="alert"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="field">
+          <label for="loginUsername">Tên đăng nhập</label>
+          <input type="text" id="loginUsername" placeholder="Tên đăng nhập"
+                 autocapitalize="none" spellcheck="false" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Mật khẩu</label>
+          <input type="password" id="loginPassword" placeholder="Mật khẩu"
+                 autocomplete="current-password" required />
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="rememberMe" />
+          <span>Lưu mật khẩu cho lần sau</span>
+        </label>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btnLogin">Đăng nhập</button>
+      </form>
+    </div>
+
+    <p class="login-footer">Hỗ trợ kỹ thuật: it@skyone.vn</p>
+  </div>
+</div>
+
+<!-- ======================================================
+     SCREEN 2: EMPLOYEE DASHBOARD
+     ====================================================== -->
+<div id="screen-employee" class="screen">
+  <header class="app-header">
+    <div class="container">
+      <div class="app-brand">
+        <div class="brand-mark-sm">USSH</div>
+        <div>
+          <strong>Chấm công</strong>
+          <small>Sky One</small>
         </div>
       </div>
-      <div id="headerAdmin">
-        <button class="admin-btn" id="btnOpenAdminLogin">Đăng nhập Admin</button>
-      </div>
-      <div id="headerAdminInfo" style="display:none;">
-        <div class="admin-info">
-          <strong id="adminEmailLabel"></strong>
-          <button class="admin-btn" id="btnLogout" style="margin-top:6px;">Đăng xuất</button>
-        </div>
+      <div class="app-user">
+        <span id="empHeaderName">—</span>
+        <button class="btn btn-ghost" id="btnEmpLogout">Đăng xuất</button>
       </div>
     </div>
   </header>
 
-  <nav class="tabs">
-    <div class="container tabs-inner">
+  <main class="app-main">
+    <div class="container">
+      <div class="employee-hero">
+        <p class="employee-greeting">Xin chào, <strong id="empGreetingName">—</strong></p>
+
+        <div class="status-icon waiting" id="statusIcon">⏳</div>
+        <h1 class="status-title" id="statusTitle">Đang kiểm tra vị trí...</h1>
+        <p class="status-desc" id="statusDesc">Vui lòng chờ trong giây lát</p>
+      </div>
+
+      <div class="card">
+        <div class="info-grid" style="border-top:none;margin-top:0;padding-top:0;">
+          <div class="info-item">
+            <span class="info-label">Nhân viên</span>
+            <span class="info-value" id="infoName">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tên đăng nhập</span>
+            <span class="info-value mono" id="infoUsername">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Ngày</span>
+            <span class="info-value" id="infoDate">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Giờ vào</span>
+            <span class="info-value" id="infoCheckin">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Giờ ra</span>
+            <span class="info-value" id="infoCheckout">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Khoảng cách</span>
+            <span class="info-value" id="infoDistance">—</span>
+          </div>
+        </div>
+
+        <div class="actions-row" id="empActions">
+          <button class="btn btn-outline" id="btnRefreshLoc">🔄 Kiểm tra lại vị trí</button>
+          <button class="btn btn-primary" id="btnEmpCheckout" style="display:none;">Check-out</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ======================================================
+     SCREEN 3: ADMIN DASHBOARD
+     ====================================================== -->
+<div id="screen-admin" class="screen">
+  <header class="app-header">
+    <div class="container">
+      <div class="app-brand">
+        <div class="brand-mark-sm">USSH</div>
+        <div>
+          <strong>Quản trị hệ thống</strong>
+          <small>Sky One</small>
+        </div>
+      </div>
+      <div class="app-user">
+        <span id="adminHeaderEmail">—</span>
+        <button class="btn btn-ghost" id="btnAdminLogout">Đăng xuất</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="app-tabs">
+    <div class="container">
       <button class="tab active" data-tab="attendance">Chấm công</button>
-      <button class="tab" data-tab="adminView" id="tabAdminView" style="display:none;">Xem chấm công</button>
-      <button class="tab" data-tab="users"     id="tabUsers"     style="display:none;">Nhân viên</button>
+      <button class="tab" data-tab="users">Nhân viên</button>
+      <button class="tab" data-tab="settings">Cài đặt vị trí</button>
     </div>
   </nav>
 
-  <main>
+  <main class="app-main">
     <div class="container">
 
-      <!-- ============ TAB 1: CHẤM CÔNG ============ -->
-      <section id="panel-attendance" class="tab-panel active">
-        <div class="card" style="max-width:560px;margin:0 auto;">
-          <h2>Chấm công</h2>
-          <p class="sub">Nhập tên đăng nhập và mật khẩu do admin cấp, sau đó chấm công khi đang ở trong phạm vi trường.</p>
-
-          <div id="configWarn" class="config-warn" style="display:none;"></div>
-          <div id="alertAttend" class="alert"></div>
-
-          <form id="attendForm" autocomplete="on">
-            <div class="form-row">
-              <label for="loginUsername">Tên đăng nhập <span style="color:var(--accent)">*</span></label>
-              <input type="text" id="loginUsername" placeholder="Tên đăng nhập do admin cấp"
-                     autocomplete="username" autocapitalize="none" spellcheck="false" required />
-            </div>
-            <div class="form-row">
-              <label for="loginPassword">Mật khẩu <span style="color:var(--accent)">*</span></label>
-              <input type="password" id="loginPassword" placeholder="Mật khẩu"
-                     autocomplete="current-password" required />
-            </div>
-
-            <div class="location-box">
-              <div class="row"><span class="label">Trạng thái định vị:</span><span id="locStatus" class="status-pill pill-wait">Chưa lấy vị trí</span></div>
-              <div class="row" style="margin-top:6px;"><span class="label">Tọa độ hiện tại:</span><span class="value" id="locCoords">—</span></div>
-              <div class="row" style="margin-top:6px;"><span class="label">Khoảng cách tới trường:</span><span class="value" id="locDistance">—</span></div>
-              <div style="margin-top:10px;">
-                <button type="button" class="btn btn-outline" id="btnGetLocation" style="width:100%;">📍 Lấy vị trí hiện tại</button>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button type="submit" class="btn btn-primary" id="btnCheckin" disabled>Check-in</button>
-              <button type="button" class="btn btn-outline" id="btnCheckout" disabled>Check-out</button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- ============ TAB 2: ADMIN VIEW ============ -->
-      <section id="panel-adminView" class="tab-panel">
-
-        <!-- Cài đặt vị trí -->
-        <div class="card" style="margin-bottom:20px;">
-          <h2>Cài đặt vị trí chấm công</h2>
-          <p class="sub">Đứng tại vị trí trường (hoặc điểm cần chấm công) và bấm nút bên dưới để đặt làm vị trí chấm công.</p>
-
-          <div id="alertLocSetup" class="alert"></div>
-
-          <div style="background:#f0f6fc;border:1px solid #cfe2f3;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;">
-            <div class="row" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-              <span class="label" style="color:var(--muted);">Vị trí đã lưu:</span>
-              <span id="adminSavedLoc" class="value" style="font-weight:600;font-family:'Courier New',monospace;">Đang tải…</span>
-            </div>
-          </div>
-
-          <div class="add-grid">
-            <div class="form-row">
-              <label for="radiusInput">Bán kính cho phép (mét)</label>
-              <input type="number" id="radiusInput" min="10" step="10" value="200" />
-            </div>
-            <div class="form-row" style="display:flex;align-items:flex-end;">
-              <button class="btn btn-primary" id="btnSetLocation" style="width:100%;">📍 Đặt vị trí hiện tại</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bảng chấm công -->
+      <!-- TAB CHẤM CÔNG -->
+      <section class="tab-panel active" id="panel-attendance">
         <div class="card">
           <h2>Bảng chấm công theo ngày</h2>
-          <p class="sub">Chọn ngày để xem dữ liệu chấm công của toàn bộ nhân viên.</p>
+          <p class="subtitle">Xem dữ liệu chấm công của toàn bộ nhân viên trong ngày.</p>
 
           <div id="alertAdmin" class="alert"></div>
 
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-            <div class="form-row" style="margin:0;flex:1;min-width:200px;">
+            <div class="field" style="margin:0;flex:1;min-width:180px;">
               <label for="adminDate">Chọn ngày</label>
               <input type="date" id="adminDate" />
             </div>
-            <button class="btn btn-primary" id="btnLoadData" style="flex:0;min-width:140px;">Xem dữ liệu</button>
+            <button class="btn btn-primary" id="btnLoadData">Xem dữ liệu</button>
           </div>
 
           <div class="table-wrap">
@@ -370,38 +806,40 @@
         </div>
       </section>
 
-      <!-- ============ TAB 3: QUẢN LÝ NHÂN VIÊN ============ -->
-      <section id="panel-users" class="tab-panel">
+      <!-- TAB NHÂN VIÊN -->
+      <section class="tab-panel" id="panel-users">
         <div class="card">
-          <h2>Quản lý nhân viên</h2>
-          <p class="sub">Thêm, sửa, khoá, xoá tài khoản đăng nhập của nhân viên vệ sinh.</p>
+          <h2>Thêm nhân viên mới</h2>
+          <p class="subtitle">Tạo tài khoản đăng nhập cho nhân viên vệ sinh.</p>
 
           <div id="alertUsers" class="alert"></div>
 
-          <h3 style="margin-bottom:12px;">Thêm nhân viên mới</h3>
-          <div class="add-grid">
-            <div class="form-row">
+          <div class="form-grid">
+            <div class="field">
               <label for="newUsername">Tên đăng nhập *</label>
-              <input type="text" id="newUsername" placeholder="vd: nva" autocapitalize="none" spellcheck="false" />
+              <input type="text" id="newUsername" placeholder="vd: nva"
+                     autocapitalize="none" spellcheck="false" />
             </div>
-            <div class="form-row">
+            <div class="field">
               <label for="newPassword">Mật khẩu *</label>
-              <input type="password" id="newPassword" placeholder="Mật khẩu" />
+              <input type="password" id="newPassword" placeholder="Tối thiểu 4 ký tự" />
             </div>
-            <div class="form-row">
+            <div class="field">
               <label for="newDisplayName">Tên hiển thị *</label>
               <input type="text" id="newDisplayName" placeholder="vd: Nguyễn Văn A" />
             </div>
-            <div class="form-row">
-              <label for="newPhone">SĐT (không bắt buộc)</label>
-              <input type="tel" id="newPhone" placeholder="vd: 0901234567" />
+            <div class="field">
+              <label for="newPhone">Số điện thoại</label>
+              <input type="tel" id="newPhone" placeholder="Không bắt buộc" />
             </div>
           </div>
-          <button class="btn btn-primary" id="btnAddEmployee" style="flex:0;min-width:180px;width:auto;margin-bottom:8px;">+ Thêm nhân viên</button>
+          <button class="btn btn-primary" id="btnAddEmployee">+ Thêm nhân viên</button>
+        </div>
 
-          <div class="divider-section"></div>
+        <div class="card">
+          <h2>Danh sách nhân viên</h2>
+          <p class="subtitle">Quản lý tài khoản, đổi mật khẩu, khoá/mở tài khoản.</p>
 
-          <h3 style="margin-bottom:12px;">Danh sách nhân viên</h3>
           <div class="table-wrap">
             <table>
               <thead>
@@ -411,7 +849,7 @@
                   <th>Tên hiển thị</th>
                   <th>SĐT</th>
                   <th>Trạng thái</th>
-                  <th style="width:200px;">Hành động</th>
+                  <th style="width:220px;">Hành động</th>
                 </tr>
               </thead>
               <tbody id="usersTableBody">
@@ -422,30 +860,41 @@
         </div>
       </section>
 
+      <!-- TAB CÀI ĐẶT -->
+      <section class="tab-panel" id="panel-settings">
+        <div class="card">
+          <h2>Cài đặt vị trí chấm công</h2>
+          <p class="subtitle">Đứng tại vị trí làm việc và bấm nút để đặt làm điểm chấm công.</p>
+
+          <div id="alertSettings" class="alert"></div>
+
+          <div class="location-box" style="margin-bottom:16px;">
+            <div class="row">
+              <span class="label">Vị trí hiện tại đã lưu</span>
+              <span class="value" id="savedLoc">Đang tải...</span>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="radiusInput">Bán kính cho phép (mét)</label>
+              <input type="number" id="radiusInput" min="10" step="10" value="200" />
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;">
+              <button class="btn btn-primary" id="btnSetLocation" style="width:100%;">
+                📍 Đặt vị trí hiện tại
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-info show" style="margin-top:8px;">
+            <strong>Ghi chú:</strong> Khi đổi vị trí, nhân viên cần mở lại app để load vị trí mới. Bán kính khuyến nghị 100–300m tùy quy mô khu vực làm việc.
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
-
-  <!-- MODAL ĐĂNG NHẬP ADMIN -->
-  <div class="modal-overlay" id="adminLoginModal">
-    <div class="modal">
-      <button class="modal-close" id="btnCloseAdminLogin">×</button>
-      <h3>Đăng nhập Admin</h3>
-      <p class="sub">Chỉ tài khoản admin được cấp bởi Sky One / nhà trường.</p>
-      <div id="alertLogin" class="alert"></div>
-      <form id="adminLoginForm">
-        <div class="form-row">
-          <label for="adminEmail">Email</label>
-          <input type="email" id="adminEmail" placeholder="admin@skyone.vn" required />
-        </div>
-        <div class="form-row">
-          <label for="adminPassword">Mật khẩu</label>
-          <input type="password" id="adminPassword" required />
-        </div>
-        <button type="submit" class="btn btn-primary" id="btnAdminLogin" style="width:100%;">Đăng nhập</button>
-      </form>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -457,12 +906,260 @@
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  /* Vị trí chấm công — động, load từ Supabase settings */
-  let attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
+  const ADMIN_EMAIL_DOMAIN = 'skyone.vn';
+  const REMEMBER_KEY = 'ussh_remember';
+  const EMP_SESSION_KEY = 'ussh_employee_session';
 
-  function locationIsOK() {
-    return typeof attendanceLocation.lat === 'number'
-        && typeof attendanceLocation.lng === 'number';
+  let attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
+  let currentEmployee = null;
+  let currentAdminEmail = null;
+  let employeeGeoState = { busy: false, pos: null, distance: null };
+
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+  const $ = (id) => document.getElementById(id);
+
+  function showAlert(el, msg, type) {
+    el.textContent = msg;
+    el.className = 'alert show alert-' + (type || 'error');
+  }
+  function hideAlert(el) { el.className = 'alert'; }
+
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function todayVN() {
+    return new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtCoord(lat, lng) {
+    if (lat == null || lng == null) return '—';
+    return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  function getPosition() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        return reject(new Error('Trình duyệt không hỗ trợ định vị.'));
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        err => {
+          let msg = 'Không lấy được vị trí.';
+          if (err.code === err.PERMISSION_DENIED)
+            msg = 'Bạn đã từ chối quyền định vị. Vui lòng bật lại trong cài đặt trình duyệt.';
+          else if (err.code === err.POSITION_UNAVAILABLE)
+            msg = 'Không xác định được vị trí. Kiểm tra GPS / kết nối mạng.';
+          else if (err.code === err.TIMEOUT)
+            msg = 'Hết thời gian chờ định vị. Thử lại.';
+          reject(new Error(msg));
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      );
+    });
+  }
+
+  /* =========================================================
+     REMEMBER ME
+     ========================================================= */
+  function saveRememberedLogin(username, password) {
+    try {
+      localStorage.setItem(REMEMBER_KEY, btoa(unescape(encodeURIComponent(JSON.stringify({ u: username, p: password })))));
+    } catch {}
+  }
+  function loadRememberedLogin() {
+    try {
+      const s = localStorage.getItem(REMEMBER_KEY);
+      if (!s) return null;
+      return JSON.parse(decodeURIComponent(escape(atob(s))));
+    } catch { return null; }
+  }
+  function clearRememberedLogin() {
+    localStorage.removeItem(REMEMBER_KEY);
+  }
+
+  /* =========================================================
+     EMPLOYEE SESSION (sessionStorage)
+     ========================================================= */
+  function saveEmployeeSession(emp) {
+    sessionStorage.setItem(EMP_SESSION_KEY, JSON.stringify(emp));
+  }
+  function loadEmployeeSession() {
+    try {
+      const s = sessionStorage.getItem(EMP_SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  }
+  function clearEmployeeSession() {
+    sessionStorage.removeItem(EMP_SESSION_KEY);
+  }
+
+  /* =========================================================
+     SCREEN SWITCHER
+     ========================================================= */
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = $('screen-' + name);
+    if (target) {
+      if (name === 'login') target.classList.add('active');
+      else target.classList.add('active');
+    }
+  }
+
+  /* =========================================================
+     LOGIN FORM
+     ========================================================= */
+  const loginForm = $('loginForm');
+  const loginAlert = $('loginAlert');
+  const btnLogin = $('btnLogin');
+
+  // Prefill remember me
+  const remembered = loadRememberedLogin();
+  if (remembered) {
+    $('loginUsername').value = remembered.u || '';
+    $('loginPassword').value = remembered.p || '';
+    $('rememberMe').checked = true;
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert(loginAlert);
+
+    const rawUsername = $('loginUsername').value.trim();
+    const password = $('loginPassword').value;
+    const remember = $('rememberMe').checked;
+
+    if (!rawUsername || !password) {
+      showAlert(loginAlert, 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.', 'error');
+      return;
+    }
+
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'Đang đăng nhập...';
+
+    try {
+      // ----- 1) Thử nhân viên trước -----
+      const { data: empRows, error: empErr } = await supabaseClient.rpc('verify_employee', {
+        p_username: rawUsername,
+        p_password: password,
+      });
+      if (empErr) throw empErr;
+
+      if (empRows && empRows.length > 0) {
+        const emp = empRows[0];
+
+        if (remember) saveRememberedLogin(rawUsername, password);
+        else clearRememberedLogin();
+
+        saveEmployeeSession({
+          id: emp.id,
+          username: emp.username,
+          display_name: emp.display_name,
+          phone: emp.phone,
+          login_at: Date.now(),
+        });
+
+        $('loginPassword').value = '';
+        loginForm.reset();
+        if (remembered) {
+          $('loginUsername').value = remember ? rawUsername : '';
+          $('rememberMe').checked = remember;
+        }
+
+        await openEmployeeDashboard(emp);
+        return;
+      }
+
+      // ----- 2) Thử admin -----
+      const email = rawUsername.includes('@')
+        ? rawUsername
+        : `${rawUsername}@${ADMIN_EMAIL_DOMAIN}`;
+
+      const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+        email, password,
+      });
+
+      if (!authErr && authData?.user) {
+        const { data: roleRow } = await supabaseClient
+          .from('user_roles').select('role')
+          .eq('user_id', authData.user.id).maybeSingle();
+
+        if (roleRow?.role === 'admin') {
+          if (remember) saveRememberedLogin(rawUsername, password);
+          else clearRememberedLogin();
+
+          $('loginPassword').value = '';
+          loginForm.reset();
+          if (remember) {
+            $('loginUsername').value = rawUsername;
+            $('rememberMe').checked = true;
+          }
+
+          await openAdminDashboard(authData.user.email);
+          return;
+        }
+        await supabaseClient.auth.signOut();
+      }
+
+      throw new Error('Sai tên đăng nhập hoặc mật khẩu.');
+    } catch (err) {
+      console.error(err);
+      showAlert(loginAlert, err.message || 'Đăng nhập thất bại.', 'error');
+    } finally {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Đăng nhập';
+    }
+  });
+
+  /* =========================================================
+     EMPLOYEE DASHBOARD
+     ========================================================= */
+  async function openEmployeeDashboard(emp) {
+    currentEmployee = emp;
+    showScreen('employee');
+
+    $('empHeaderName').textContent = emp.display_name || emp.username;
+    $('empGreetingName').textContent = emp.display_name || emp.username;
+    $('infoName').textContent = emp.display_name || emp.username;
+    $('infoUsername').textContent = emp.username;
+    $('infoDate').textContent = todayVN();
+    $('infoCheckin').textContent = '—';
+    $('infoCheckout').textContent = '—';
+    $('infoDistance').textContent = '—';
+    $('btnEmpCheckout').style.display = 'none';
+
+    setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Vui lòng chờ trong giây lát');
+    await loadSchoolLocation();
+    await runAutoCheckin();
+  }
+
+  function setEmployeeStatus(kind, icon, title, desc) {
+    const iconEl = $('statusIcon');
+    iconEl.className = 'status-icon ' + kind;
+    iconEl.textContent = icon;
+    $('statusTitle').textContent = title;
+    $('statusDesc').textContent = desc;
   }
 
   async function loadSchoolLocation() {
@@ -484,472 +1181,260 @@
     }
   }
 
-  /* =========================================================
-     HELPERS
-     ========================================================= */
-  function showAlert(el, msg, type) {
-    el.textContent = msg;
-    el.className = 'alert show alert-' + (type || 'error');
-  }
-  function hideAlert(el) { el.className = 'alert'; }
-
-  function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371000;
-    const toRad = d => (d * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2)**2 +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-              Math.sin(dLon/2)**2;
-    return 2 * R * Math.asin(Math.sqrt(a));
-  }
-  function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
-  function fmtTime(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  }
-  function fmtCoord(lat, lng) {
-    if (lat == null || lng == null) return '—';
-    return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
-  }
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
-  }
-
-  /* =========================================================
-     TABS
-     ========================================================= */
-  const tabs = document.querySelectorAll('.tab');
-  const panels = {
-    attendance: document.getElementById('panel-attendance'),
-    adminView:  document.getElementById('panel-adminView'),
-    users:      document.getElementById('panel-users'),
-  };
-  function switchTab(name) {
-    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-    Object.entries(panels).forEach(([k, el]) => el.classList.toggle('active', k === name));
-    if (name === 'adminView') {
-      const d = document.getElementById('adminDate');
-      if (!d.value) d.value = todayISO();
-      loadSettingsForAdmin();
-    }
-    if (name === 'users') loadEmployees();
-  }
-  tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
-
-  /* =========================================================
-     TAB 1 — CHẤM CÔNG
-     ========================================================= */
-  const alertAttend = document.getElementById('alertAttend');
-  const locStatusEl = document.getElementById('locStatus');
-  const locCoordsEl = document.getElementById('locCoords');
-  const locDistEl   = document.getElementById('locDistance');
-  const btnGetLoc   = document.getElementById('btnGetLocation');
-  const btnCheckin  = document.getElementById('btnCheckin');
-  const btnCheckout = document.getElementById('btnCheckout');
-
-  let currentPos = null;
-  let distanceToSchool = null;
-  let inRange = false;
-
-  function updateLocationUI() {
-    if (!currentPos) {
-      locStatusEl.className = 'status-pill pill-wait';
-      locStatusEl.textContent = 'Chưa lấy vị trí';
-      return;
-    }
-    locCoordsEl.textContent = fmtCoord(currentPos.lat, currentPos.lng);
-
-    if (!locationIsOK()) {
-      locStatusEl.className = 'status-pill pill-fail';
-      locStatusEl.textContent = 'Admin chưa cài đặt vị trí trường';
-      locDistEl.textContent = '—';
-      btnCheckin.disabled = true;
-      btnCheckout.disabled = true;
-      return;
-    }
-
-    distanceToSchool = haversine(
-      currentPos.lat, currentPos.lng,
-      attendanceLocation.lat, attendanceLocation.lng
-    );
-    locDistEl.textContent = distanceToSchool.toFixed(0) + ' m (bán kính ' +
-      attendanceLocation.radiusMeters + ' m)';
-
-    inRange = distanceToSchool <= attendanceLocation.radiusMeters;
-    if (inRange) {
-      locStatusEl.className = 'status-pill pill-ok';
-      locStatusEl.textContent = '✅ Trong phạm vi';
-    } else {
-      locStatusEl.className = 'status-pill pill-fail';
-      locStatusEl.textContent = '❌ Ngoài phạm vi';
-    }
-    btnCheckin.disabled  = !inRange;
-    btnCheckout.disabled = !inRange;
-  }
-
-  btnGetLoc.addEventListener('click', async () => {
-    hideAlert(alertAttend);
-    if (!navigator.geolocation) {
-      showAlert(alertAttend, 'Trình duyệt không hỗ trợ định vị.', 'error');
-      return;
-    }
-    locStatusEl.className = 'status-pill pill-wait';
-    locStatusEl.textContent = 'Đang lấy vị trí...';
-    btnGetLoc.disabled = true;
-
-    // Refresh vị trí trường từ Supabase mỗi lần bấm
-    await loadSchoolLocation();
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        updateLocationUI();
-        btnGetLoc.disabled = false;
-      },
-      (err) => {
-        let msg = 'Không lấy được vị trí.';
-        if (err.code === err.PERMISSION_DENIED)
-          msg = 'Bạn đã từ chối quyền định vị. Hãy bật lại trong cài đặt trình duyệt.';
-        else if (err.code === err.POSITION_UNAVAILABLE)
-          msg = 'Không xác định được vị trí. Kiểm tra GPS / mạng.';
-        else if (err.code === err.TIMEOUT)
-          msg = 'Hết thời gian chờ định vị. Thử lại.';
-        showAlert(alertAttend, msg, 'error');
-        locStatusEl.className = 'status-pill pill-fail';
-        locStatusEl.textContent = 'Lỗi định vị';
-        btnGetLoc.disabled = false;
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  });
-
-  async function verifyEmployee(username, password) {
-    const { data, error } = await supabaseClient.rpc('verify_employee', {
-      p_username: username,
-      p_password: password,
-    });
-    if (error) throw error;
-    return (data && data.length > 0) ? data[0] : null;
-  }
-
-  document.getElementById('attendForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideAlert(alertAttend);
-
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!username || !password) {
-      showAlert(alertAttend, 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'error');
-      return;
-    }
-    if (!currentPos || !inRange) {
-      showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
-      return;
-    }
-
-    btnCheckin.disabled = true;
-    btnCheckin.textContent = 'Đang xác thực...';
+  async function runAutoCheckin() {
+    if (employeeGeoState.busy) return;
+    employeeGeoState.busy = true;
 
     try {
-      const emp = await verifyEmployee(username, password);
-      if (!emp) {
-        showAlert(alertAttend, 'Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khoá.', 'error');
+      // Bước 1: lấy vị trí
+      setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Xác định vị trí GPS của bạn');
+      const pos = await getPosition();
+      employeeGeoState.pos = pos;
+
+      if (attendanceLocation.lat == null) {
+        setEmployeeStatus('error', '⚠️', 'Chưa cấu hình vị trí chấm công',
+          'Admin chưa đặt vị trí trường. Vui lòng liên hệ quản lý.');
         return;
       }
 
-      btnCheckin.textContent = 'Đang lưu...';
+      // Bước 2: tính khoảng cách
+      const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
+      employeeGeoState.distance = dist;
+      $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
+
+      const inRange = dist <= attendanceLocation.radiusMeters;
+
+      // Bước 3: kiểm tra đã check-in hôm nay chưa
       const today = todayISO();
-
       const { data: existing, error: qErr } = await supabaseClient
-        .from('attendance').select('id')
-        .eq('employee_id', emp.username).eq('work_date', today).limit(1);
+        .from('attendance').select('*')
+        .eq('employee_id', currentEmployee.username)
+        .eq('work_date', today)
+        .order('check_in_time', { ascending: false })
+        .limit(1);
       if (qErr) throw qErr;
-      if (existing && existing.length > 0) {
-        showAlert(alertAttend, `${emp.display_name} đã check-in hôm nay rồi.`, 'warning');
+
+      const record = existing && existing[0];
+
+      if (record) {
+        $('infoCheckin').textContent = fmtTime(record.check_in_time);
+        $('infoCheckout').textContent = record.check_out_time ? fmtTime(record.check_out_time) : '—';
+
+        if (record.check_out_time) {
+          setEmployeeStatus('success', '✅', 'Đã hoàn thành ca làm việc',
+            `Vào lúc ${fmtTime(record.check_in_time)} · Ra lúc ${fmtTime(record.check_out_time)}`);
+          $('btnEmpCheckout').style.display = 'none';
+          return;
+        }
+
+        // Đã check-in, chưa check-out
+        if (inRange) {
+          setEmployeeStatus('success', '✅', `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
+            'Bạn đang trong phạm vi. Bấm Check-out khi kết thúc ca làm việc.');
+          $('btnEmpCheckout').style.display = 'inline-flex';
+          $('btnEmpCheckout').disabled = false;
+        } else {
+          setEmployeeStatus('warning', '⚠️',
+            `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
+            `Bạn đang ở ngoài phạm vi (${Math.round(dist)}m / ${attendanceLocation.radiusMeters}m). Di chuyển vào phạm vi để check-out.`);
+          $('btnEmpCheckout').style.display = 'inline-flex';
+          $('btnEmpCheckout').disabled = true;
+        }
         return;
       }
+
+      // Bước 4: chưa check-in → nếu trong phạm vi, tự check-in
+      if (!inRange) {
+        setEmployeeStatus('warning', '📍', 'Bạn đang ở ngoài phạm vi chấm công',
+          `Khoảng cách hiện tại: ${Math.round(dist)}m · Bán kính cho phép: ${attendanceLocation.radiusMeters}m. Di chuyển vào phạm vi để tự động chấm công.`);
+        return;
+      }
+
+      // Trong phạm vi + chưa check-in → AUTO CHECK-IN
+      setEmployeeStatus('loading', '⏳', 'Đang chấm công...', 'Xác nhận vị trí và ghi nhận giờ vào');
 
       const { error: insErr } = await supabaseClient.from('attendance').insert({
-        employee_name: emp.display_name,
-        employee_id:   emp.username,
-        work_date:     today,
+        employee_name: currentEmployee.display_name,
+        employee_id: currentEmployee.username,
+        work_date: today,
         check_in_time: new Date().toISOString(),
-        check_in_lat:  currentPos.lat,
-        check_in_lng:  currentPos.lng,
-        check_in_distance: distanceToSchool,
+        check_in_lat: pos.lat,
+        check_in_lng: pos.lng,
+        check_in_distance: dist,
       });
       if (insErr) throw insErr;
 
-      document.getElementById('loginPassword').value = '';
-      showAlert(alertAttend, `✅ Check-in thành công lúc ${new Date().toLocaleTimeString('vi-VN')}. Xin chào ${emp.display_name}!`, 'success');
+      $('infoCheckin').textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      $('infoCheckout').textContent = '—';
+
+      setEmployeeStatus('success', '✅', 'Chấm công thành công',
+        `Bạn đã được tự động check-in lúc ${fmtTime(new Date().toISOString())} · Cách vị trí ${Math.round(dist)}m`);
+      $('btnEmpCheckout').style.display = 'inline-flex';
+      $('btnEmpCheckout').disabled = false;
     } catch (err) {
       console.error(err);
-      showAlert(alertAttend, 'Lỗi: ' + (err.message || err), 'error');
+      setEmployeeStatus('error', '❌', 'Không thể chấm công', err.message || 'Đã có lỗi xảy ra.');
     } finally {
-      btnCheckin.textContent = 'Check-in';
-      btnCheckin.disabled = !inRange;
+      employeeGeoState.busy = false;
     }
-  });
+  }
 
-  btnCheckout.addEventListener('click', async () => {
-    hideAlert(alertAttend);
+  $('btnRefreshLoc').addEventListener('click', () => runAutoCheckin());
 
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
-
-    if (!username || !password) {
-      showAlert(alertAttend, 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'error');
-      return;
-    }
-    if (!currentPos || !inRange) {
-      showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
-      return;
-    }
-
-    btnCheckout.disabled = true;
-    btnCheckout.textContent = 'Đang xác thực...';
+  $('btnEmpCheckout').addEventListener('click', async () => {
+    if (!currentEmployee) return;
+    const btn = $('btnEmpCheckout');
+    btn.disabled = true;
+    btn.textContent = 'Đang xử lý...';
 
     try {
-      const emp = await verifyEmployee(username, password);
-      if (!emp) {
-        showAlert(alertAttend, 'Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khoá.', 'error');
-        return;
+      setEmployeeStatus('loading', '⏳', 'Đang check-out...', 'Xác nhận vị trí của bạn');
+
+      const pos = await getPosition();
+      const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
+
+      if (dist > attendanceLocation.radiusMeters) {
+        throw new Error(`Bạn đang ngoài phạm vi (${Math.round(dist)}m). Cần ở trong phạm vi ${attendanceLocation.radiusMeters}m để check-out.`);
       }
 
-      btnCheckout.textContent = 'Đang lưu...';
       const today = todayISO();
-
       const { data: rows, error: qErr } = await supabaseClient
         .from('attendance').select('id, check_out_time')
-        .eq('employee_id', emp.username).eq('work_date', today)
+        .eq('employee_id', currentEmployee.username)
+        .eq('work_date', today)
         .order('check_in_time', { ascending: false }).limit(1);
       if (qErr) throw qErr;
-      if (!rows || rows.length === 0) {
-        showAlert(alertAttend, `${emp.display_name} chưa check-in hôm nay.`, 'error');
-        return;
-      }
-      if (rows[0].check_out_time) {
-        showAlert(alertAttend, `${emp.display_name} đã check-out hôm nay rồi.`, 'warning');
-        return;
-      }
+
+      if (!rows || rows.length === 0) throw new Error('Không tìm thấy lượt check-in hôm nay.');
+      if (rows[0].check_out_time) throw new Error('Bạn đã check-out hôm nay rồi.');
 
       const { error: upErr } = await supabaseClient.from('attendance').update({
         check_out_time: new Date().toISOString(),
-        check_out_lat:  currentPos.lat,
-        check_out_lng:  currentPos.lng,
-        check_out_distance: distanceToSchool,
+        check_out_lat: pos.lat,
+        check_out_lng: pos.lng,
+        check_out_distance: dist,
       }).eq('id', rows[0].id);
       if (upErr) throw upErr;
 
-      document.getElementById('loginPassword').value = '';
-      showAlert(alertAttend, `✅ Check-out thành công lúc ${new Date().toLocaleTimeString('vi-VN')}. Xin chào ${emp.display_name}!`, 'success');
+      $('infoCheckout').textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      setEmployeeStatus('success', '✅', 'Check-out thành công',
+        `Bạn đã kết thúc ca làm việc lúc ${fmtTime(new Date().toISOString())}`);
+      btn.style.display = 'none';
     } catch (err) {
       console.error(err);
-      showAlert(alertAttend, 'Lỗi: ' + (err.message || err), 'error');
+      setEmployeeStatus('error', '❌', 'Không thể check-out', err.message || 'Đã có lỗi xảy ra.');
+      btn.disabled = false;
     } finally {
-      btnCheckout.textContent = 'Check-out';
-      btnCheckout.disabled = !inRange;
+      btn.textContent = 'Check-out';
     }
+  });
+
+  $('btnEmpLogout').addEventListener('click', () => {
+    clearEmployeeSession();
+    currentEmployee = null;
+    showScreen('login');
   });
 
   /* =========================================================
-     ADMIN AUTH
+     ADMIN DASHBOARD
      ========================================================= */
-  const modal         = document.getElementById('adminLoginModal');
-  const btnOpenLogin  = document.getElementById('btnOpenAdminLogin');
-  const btnCloseLogin = document.getElementById('btnCloseAdminLogin');
-  const loginForm     = document.getElementById('adminLoginForm');
-  const alertLogin    = document.getElementById('alertLogin');
-  const headerAdmin   = document.getElementById('headerAdmin');
-  const headerInfo    = document.getElementById('headerAdminInfo');
-  const adminEmailLbl = document.getElementById('adminEmailLabel');
-  const tabAdminView  = document.getElementById('tabAdminView');
-  const tabUsers      = document.getElementById('tabUsers');
+  async function openAdminDashboard(email) {
+    currentAdminEmail = email;
+    showScreen('admin');
+    $('adminHeaderEmail').textContent = email;
 
-  btnOpenLogin.addEventListener('click', () => modal.classList.add('show'));
-  btnCloseLogin.addEventListener('click', () => modal.classList.remove('show'));
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
-
-  function setAdminUI(isAdmin, email) {
-    if (isAdmin) {
-      headerAdmin.style.display = 'none';
-      headerInfo.style.display = 'block';
-      adminEmailLbl.textContent = email || '';
-      tabAdminView.style.display = 'inline-block';
-      tabUsers.style.display     = 'inline-block';
-    } else {
-      headerAdmin.style.display = 'block';
-      headerInfo.style.display = 'none';
-      tabAdminView.style.display = 'none';
-      tabUsers.style.display     = 'none';
-      if (panels.adminView.classList.contains('active') || panels.users.classList.contains('active')) {
-        switchTab('attendance');
-      }
-    }
+    $('adminDate').value = todayISO();
+    await loadSettingsForAdmin();
+    await loadEmployees();
   }
 
-  async function checkAdminStatus() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) { setAdminUI(false); return; }
-    const { data } = await supabaseClient
-      .from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
-    if (data && data.role === 'admin') setAdminUI(true, session.user.email);
-    else setAdminUI(false);
-  }
-
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideAlert(alertLogin);
-
-    const email    = document.getElementById('adminEmail').value.trim();
-    const password = document.getElementById('adminPassword').value;
-    const btn      = document.getElementById('btnAdminLogin');
-
-    btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
-
-    try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-
-      const { data: roleRow } = await supabaseClient
-        .from('user_roles').select('role').eq('user_id', data.user.id).maybeSingle();
-
-      if (!roleRow || roleRow.role !== 'admin') {
-        await supabaseClient.auth.signOut();
-        throw new Error('Tài khoản này không có quyền admin.');
-      }
-
-      setAdminUI(true, data.user.email);
-      modal.classList.remove('show');
-      document.getElementById('adminEmail').value = '';
-      document.getElementById('adminPassword').value = '';
-      switchTab('adminView');
-    } catch (err) {
-      console.error(err);
-      showAlert(alertLogin, err.message || 'Đăng nhập thất bại.', 'error');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Đăng nhập';
-    }
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const name = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+      if (name === 'settings') loadSettingsForAdmin();
+      if (name === 'users') loadEmployees();
+    });
   });
 
-  document.getElementById('btnLogout').addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-    setAdminUI(false);
-  });
-
-  /* =========================================================
-     ADMIN — CÀI ĐẶT VỊ TRÍ (Fix 2)
-     ========================================================= */
-  const alertLocSetup = document.getElementById('alertLocSetup');
-  const adminSavedLoc = document.getElementById('adminSavedLoc');
-  const radiusInput   = document.getElementById('radiusInput');
-  const btnSetLoc     = document.getElementById('btnSetLocation');
-
+  /* ---------- SETTINGS ---------- */
   async function loadSettingsForAdmin() {
     try {
       const { data, error } = await supabaseClient
         .from('settings').select('*').eq('id', 1).maybeSingle();
       if (error) throw error;
       if (data && data.university_lat != null && data.university_lng != null) {
-        adminSavedLoc.textContent =
-          `${Number(data.university_lat).toFixed(5)}, ${Number(data.university_lng).toFixed(5)} — Bán kính ${data.radius_meters || 200} m`;
-        radiusInput.value = data.radius_meters || 200;
+        $('savedLoc').textContent =
+          `${Number(data.university_lat).toFixed(5)}, ${Number(data.university_lng).toFixed(5)} · Bán kính ${data.radius_meters || 200}m`;
+        $('radiusInput').value = data.radius_meters || 200;
         attendanceLocation = {
           lat: data.university_lat,
           lng: data.university_lng,
           radiusMeters: data.radius_meters || 200,
         };
       } else {
-        adminSavedLoc.textContent = 'Chưa cài đặt — hãy bấm nút bên dưới';
+        $('savedLoc').textContent = 'Chưa cài đặt';
       }
     } catch (err) {
       console.warn(err);
-      adminSavedLoc.textContent = 'Lỗi tải';
+      $('savedLoc').textContent = 'Lỗi tải';
     }
   }
 
-  btnSetLoc.addEventListener('click', () => {
-    hideAlert(alertLocSetup);
-    if (!navigator.geolocation) {
-      showAlert(alertLocSetup, 'Trình duyệt không hỗ trợ định vị.', 'error');
-      return;
-    }
-    const radius = parseInt(radiusInput.value, 10);
+  $('btnSetLocation').addEventListener('click', async () => {
+    const alertEl = $('alertSettings');
+    const btn = $('btnSetLocation');
+    hideAlert(alertEl);
+
+    const radius = parseInt($('radiusInput').value, 10);
     if (!radius || radius < 10) {
-      showAlert(alertLocSetup, 'Bán kính phải là số >= 10 mét.', 'error');
+      showAlert(alertEl, 'Bán kính phải là số >= 10 mét.', 'error');
       return;
     }
 
-    btnSetLoc.disabled = true;
-    btnSetLoc.textContent = 'Đang lấy vị trí...';
+    btn.disabled = true;
+    btn.textContent = 'Đang lấy vị trí...';
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+    try {
+      const pos = await getPosition();
+      const { error } = await supabaseClient.from('settings').update({
+        university_lat: pos.lat,
+        university_lng: pos.lng,
+        radius_meters: radius,
+        updated_at: new Date().toISOString(),
+      }).eq('id', 1);
+      if (error) throw error;
 
-        try {
-          const { error } = await supabaseClient
-            .from('settings')
-            .update({
-              university_lat: lat,
-              university_lng: lng,
-              radius_meters:  radius,
-              updated_at:     new Date().toISOString(),
-            })
-            .eq('id', 1);
-          if (error) throw error;
-
-          attendanceLocation = { lat, lng, radiusMeters: radius };
-          adminSavedLoc.textContent =
-            `${lat.toFixed(5)}, ${lng.toFixed(5)} — Bán kính ${radius} m`;
-          showAlert(alertLocSetup,
-            `✅ Đã lưu vị trí: ${lat.toFixed(5)}, ${lng.toFixed(5)} (bán kính ${radius} m)`,
-            'success');
-        } catch (err) {
-          console.error(err);
-          showAlert(alertLocSetup, 'Lỗi lưu: ' + (err.message || err), 'error');
-        } finally {
-          btnSetLoc.disabled = false;
-          btnSetLoc.textContent = '📍 Đặt vị trí hiện tại';
-        }
-      },
-      (err) => {
-        let msg = 'Không lấy được vị trí.';
-        if (err.code === err.PERMISSION_DENIED) msg = 'Bạn đã từ chối quyền định vị.';
-        else if (err.code === err.TIMEOUT) msg = 'Hết thời gian chờ định vị.';
-        showAlert(alertLocSetup, msg, 'error');
-        btnSetLoc.disabled = false;
-        btnSetLoc.textContent = '📍 Đặt vị trí hiện tại';
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+      attendanceLocation = { lat: pos.lat, lng: pos.lng, radiusMeters: radius };
+      $('savedLoc').textContent =
+        `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)} · Bán kính ${radius}m`;
+      showAlert(alertEl, `Đã lưu vị trí: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)} (bán kính ${radius}m)`, 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertEl, 'Lỗi: ' + (err.message || err), 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📍 Đặt vị trí hiện tại';
+    }
   });
 
-  /* =========================================================
-     ADMIN VIEW — XEM DỮ LIỆU THEO NGÀY
-     ========================================================= */
-  const adminDate   = document.getElementById('adminDate');
-  const btnLoadData = document.getElementById('btnLoadData');
-  const adminTbody  = document.getElementById('adminTableBody');
-  const alertAdmin  = document.getElementById('alertAdmin');
+  /* ---------- ATTENDANCE DATA ---------- */
+  $('btnLoadData').addEventListener('click', async () => {
+    const alertEl = $('alertAdmin');
+    const btn = $('btnLoadData');
+    const tbody = $('adminTableBody');
+    hideAlert(alertEl);
 
-  adminDate.value = todayISO();
+    const date = $('adminDate').value;
+    if (!date) {
+      showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
+      return;
+    }
 
-  btnLoadData.addEventListener('click', async () => {
-    hideAlert(alertAdmin);
-    const date = adminDate.value;
-    if (!date) { showAlert(alertAdmin, 'Vui lòng chọn ngày.', 'error'); return; }
-
-    btnLoadData.disabled = true;
-    btnLoadData.textContent = 'Đang tải...';
+    btn.disabled = true;
+    btn.textContent = 'Đang tải...';
 
     try {
       const { data, error } = await supabaseClient
@@ -958,24 +1443,24 @@
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        adminTbody.innerHTML = '<tr><td colspan="7" class="empty">Không có dữ liệu chấm công cho ngày này.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">Không có dữ liệu chấm công cho ngày này.</td></tr>';
         return;
       }
 
-      adminTbody.innerHTML = data.map((row, i) => {
+      tbody.innerHTML = data.map((row, i) => {
         const inPos = row.check_in_lat != null
           ? `<div class="cell-mono">${fmtCoord(row.check_in_lat, row.check_in_lng)}</div>
-             <div class="cell-mono">${row.check_in_distance != null ? Math.round(row.check_in_distance) + ' m' : ''}</div>`
+             <div class="cell-mono">${row.check_in_distance != null ? Math.round(row.check_in_distance) + 'm' : ''}</div>`
           : '—';
         const outPos = row.check_out_lat != null
           ? `<div class="cell-mono">${fmtCoord(row.check_out_lat, row.check_out_lng)}</div>
-             <div class="cell-mono">${row.check_out_distance != null ? Math.round(row.check_out_distance) + ' m' : ''}</div>`
+             <div class="cell-mono">${row.check_out_distance != null ? Math.round(row.check_out_distance) + 'm' : ''}</div>`
           : '—';
         return `
           <tr>
             <td>${i + 1}</td>
             <td><strong>${escapeHtml(row.employee_name)}</strong></td>
-            <td><code style="font-size:12px;">${escapeHtml(row.employee_id || '')}</code></td>
+            <td><code style="font-size:11px;">${escapeHtml(row.employee_id || '')}</code></td>
             <td>${fmtTime(row.check_in_time)}</td>
             <td>${inPos}</td>
             <td>${fmtTime(row.check_out_time)}</td>
@@ -984,108 +1469,113 @@
       }).join('');
     } catch (err) {
       console.error(err);
-      showAlert(alertAdmin, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
-      adminTbody.innerHTML = '<tr><td colspan="7" class="empty">Lỗi tải dữ liệu.</td></tr>';
+      showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Lỗi tải dữ liệu.</td></tr>';
     } finally {
-      btnLoadData.disabled = false;
-      btnLoadData.textContent = 'Xem dữ liệu';
+      btn.disabled = false;
+      btn.textContent = 'Xem dữ liệu';
     }
   });
 
-  /* =========================================================
-     QUẢN LÝ NHÂN VIÊN (Fix 3)
-     ========================================================= */
-  const alertUsers  = document.getElementById('alertUsers');
-  const usersTbody  = document.getElementById('usersTableBody');
-  const btnAddEmp   = document.getElementById('btnAddEmployee');
-
+  /* ---------- EMPLOYEES ---------- */
   async function loadEmployees() {
-    hideAlert(alertUsers);
+    const tbody = $('usersTableBody');
+    const alertEl = $('alertUsers');
+    hideAlert(alertEl);
+
     try {
       const { data, error } = await supabaseClient
         .from('employees').select('*').order('display_name', { ascending: true });
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        usersTbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có nhân viên nào.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có nhân viên nào.</td></tr>';
         return;
       }
 
-      usersTbody.innerHTML = data.map((e, i) => `
+      tbody.innerHTML = data.map((e, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><code style="font-size:12px;">${escapeHtml(e.username)}</code></td>
+          <td><code style="font-size:11px;">${escapeHtml(e.username)}</code></td>
           <td><strong>${escapeHtml(e.display_name)}</strong></td>
           <td>${e.phone ? escapeHtml(e.phone) : '—'}</td>
           <td>${e.active
-            ? '<span class="status-pill pill-ok">Hoạt động</span>'
-            : '<span class="status-pill pill-fail">Đã khoá</span>'}</td>
+            ? '<span class="pill pill-ok">Hoạt động</span>'
+            : '<span class="pill pill-fail">Đã khoá</span>'}</td>
           <td>
             <div class="row-actions">
-              <button class="btn btn-outline" data-action="reset"  data-id="${e.id}">Mật khẩu</button>
-              <button class="btn btn-outline" data-action="toggle" data-id="${e.id}" data-active="${e.active}">${e.active ? 'Khoá' : 'Mở'}</button>
-              <button class="btn btn-danger"  data-action="delete" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Xoá</button>
+              <button class="btn btn-outline btn-sm" data-action="reset" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Mật khẩu</button>
+              <button class="btn btn-outline btn-sm" data-action="toggle" data-id="${e.id}" data-active="${e.active}">${e.active ? 'Khoá' : 'Mở'}</button>
+              <button class="btn btn-danger btn-sm" data-action="delete" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Xoá</button>
             </div>
           </td>
         </tr>
       `).join('');
     } catch (err) {
       console.error(err);
-      showAlert(alertUsers, 'Lỗi tải danh sách: ' + (err.message || err), 'error');
+      showAlert(alertEl, 'Lỗi tải danh sách: ' + (err.message || err), 'error');
     }
   }
 
-  usersTbody.addEventListener('click', async (ev) => {
+  $('usersTableBody').addEventListener('click', async (ev) => {
     const btn = ev.target.closest('[data-action]');
     if (!btn) return;
     const { action, id, active, name } = btn.dataset;
-    hideAlert(alertUsers);
+    const alertEl = $('alertUsers');
+    hideAlert(alertEl);
 
     if (action === 'delete') {
       if (!confirm(`Xoá nhân viên "${name}"? Dữ liệu chấm công cũ vẫn được giữ.`)) return;
       const { error } = await supabaseClient.from('employees').delete().eq('id', id);
-      if (error) return showAlert(alertUsers, 'Lỗi xoá: ' + error.message, 'error');
-      showAlert(alertUsers, 'Đã xoá nhân viên.', 'success');
+      if (error) return showAlert(alertEl, 'Lỗi xoá: ' + error.message, 'error');
+      showAlert(alertEl, 'Đã xoá nhân viên.', 'success');
       loadEmployees();
     } else if (action === 'toggle') {
       const newActive = active !== 'true';
       const { error } = await supabaseClient.from('employees').update({ active: newActive }).eq('id', id);
-      if (error) return showAlert(alertUsers, 'Lỗi: ' + error.message, 'error');
+      if (error) return showAlert(alertEl, 'Lỗi: ' + error.message, 'error');
       loadEmployees();
     } else if (action === 'reset') {
       const newPwd = prompt(`Nhập mật khẩu mới cho "${name}":`);
       if (!newPwd) return;
-      if (newPwd.length < 4) return showAlert(alertUsers, 'Mật khẩu phải >= 4 ký tự.', 'error');
+      if (newPwd.length < 4) return showAlert(alertEl, 'Mật khẩu phải >= 4 ký tự.', 'error');
       const { error } = await supabaseClient.rpc('reset_employee_password', {
         p_id: id, p_password: newPwd,
       });
-      if (error) return showAlert(alertUsers, 'Lỗi đổi mật khẩu: ' + error.message, 'error');
-      showAlert(alertUsers, 'Đã đổi mật khẩu.', 'success');
+      if (error) return showAlert(alertEl, 'Lỗi đổi mật khẩu: ' + error.message, 'error');
+      showAlert(alertEl, 'Đã đổi mật khẩu.', 'success');
     }
   });
 
-  btnAddEmp.addEventListener('click', async () => {
-    hideAlert(alertUsers);
-    const username    = document.getElementById('newUsername').value.trim();
-    const password    = document.getElementById('newPassword').value;
-    const displayName = document.getElementById('newDisplayName').value.trim();
-    const phone       = document.getElementById('newPhone').value.trim();
+  $('btnAddEmployee').addEventListener('click', async () => {
+    const alertEl = $('alertUsers');
+    const btn = $('btnAddEmployee');
+    hideAlert(alertEl);
+
+    const username    = $('newUsername').value.trim();
+    const password    = $('newPassword').value;
+    const displayName = $('newDisplayName').value.trim();
+    const phone       = $('newPhone').value.trim();
 
     if (!username || !password || !displayName) {
-      showAlert(alertUsers, 'Vui lòng nhập đủ: tên đăng nhập, mật khẩu, tên hiển thị.', 'error');
+      showAlert(alertEl, 'Vui lòng nhập đủ: tên đăng nhập, mật khẩu, tên hiển thị.', 'error');
       return;
     }
     if (password.length < 4) {
-      showAlert(alertUsers, 'Mật khẩu phải từ 4 ký tự.', 'error');
+      showAlert(alertEl, 'Mật khẩu phải từ 4 ký tự.', 'error');
       return;
     }
     if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
-      showAlert(alertUsers, 'Tên đăng nhập chỉ gồm chữ, số, gạch dưới, gạch ngang, dấu chấm.', 'error');
+      showAlert(alertEl, 'Tên đăng nhập chỉ gồm chữ, số, gạch dưới, gạch ngang, dấu chấm.', 'error');
+      return;
+    }
+    if (username === 'admin') {
+      showAlert(alertEl, 'Tên "admin" được dành riêng cho quản trị viên.', 'error');
       return;
     }
 
-    btnAddEmp.disabled = true;
-    btnAddEmp.textContent = 'Đang thêm...';
+    btn.disabled = true;
+    btn.textContent = 'Đang thêm...';
 
     try {
       const { error } = await supabaseClient.rpc('create_employee', {
@@ -1096,46 +1586,68 @@
       });
       if (error) throw error;
 
-      showAlert(alertUsers, `Đã thêm nhân viên "${displayName}".`, 'success');
-      document.getElementById('newUsername').value = '';
-      document.getElementById('newPassword').value = '';
-      document.getElementById('newDisplayName').value = '';
-      document.getElementById('newPhone').value = '';
+      showAlert(alertEl, `Đã thêm nhân viên "${displayName}".`, 'success');
+      $('newUsername').value = '';
+      $('newPassword').value = '';
+      $('newDisplayName').value = '';
+      $('newPhone').value = '';
       loadEmployees();
     } catch (err) {
       console.error(err);
       const msg = (err.message || '').includes('duplicate')
         ? 'Tên đăng nhập đã tồn tại.'
         : (err.message || 'Lỗi không xác định');
-      showAlert(alertUsers, 'Lỗi: ' + msg, 'error');
+      showAlert(alertEl, 'Lỗi: ' + msg, 'error');
     } finally {
-      btnAddEmp.disabled = false;
-      btnAddEmp.textContent = '+ Thêm nhân viên';
+      btn.disabled = false;
+      btn.textContent = '+ Thêm nhân viên';
     }
   });
 
+  $('btnAdminLogout').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+    currentAdminEmail = null;
+    showScreen('login');
+  });
+
   /* =========================================================
-     KHỞI CHẠY
+     BOOTSTRAP — kiểm tra session & quyết định màn hình
      ========================================================= */
-  (async () => {
-    await loadSchoolLocation();
-    await checkAdminStatus();
+  async function bootstrap() {
+    // 1) Admin session?
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      const { data: roleRow } = await supabaseClient
+        .from('user_roles').select('role')
+        .eq('user_id', session.user.id).maybeSingle();
 
-    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) { setAdminUI(false); return; }
-      const { data } = await supabaseClient
-        .from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
-      if (data && data.role === 'admin') setAdminUI(true, session.user.email);
-      else setAdminUI(false);
-    });
-
-    // Nếu chưa có vị trí trường, hiện cảnh báo ở tab chấm công
-    if (!locationIsOK()) {
-      const w = document.getElementById('configWarn');
-      w.style.display = 'block';
-      w.innerHTML = '<strong>Chưa có vị trí chấm công.</strong><br>Admin cần vào tab <b>Xem chấm công</b> → bấm <b>Đặt vị trí hiện tại</b> để cài đặt.';
+      if (roleRow?.role === 'admin') {
+        await loadSchoolLocation();
+        await openAdminDashboard(session.user.email);
+        return;
+      }
     }
-  })();
+
+    // 2) Employee session?
+    const emp = loadEmployeeSession();
+    if (emp) {
+      await loadSchoolLocation();
+      await openEmployeeDashboard(emp);
+      return;
+    }
+
+    // 3) Mặc định: login
+    showScreen('login');
+  }
+
+  // Lắng nghe auth state changes (đăng nhập / xuất admin)
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT' && !currentEmployee) {
+      showScreen('login');
+    }
+  });
+
+  bootstrap();
 </script>
 </body>
 </html>
