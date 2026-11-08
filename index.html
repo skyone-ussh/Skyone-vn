@@ -161,21 +161,21 @@
       <!-- TAB CHẤM CÔNG -->
       <section class="tab-panel active" id="panel-attendance">
         <div class="card">
-          <h2>Bảng chấm công theo ngày</h2>
-          <p class="subtitle">Xem dữ liệu chấm công của toàn bộ nhân viên trong ngày.</p>
+          <div class="card-toolbar">
+            <div class="card-toolbar-title">
+              <h2>Bảng chấm công</h2>
+              <p class="subtitle">Dữ liệu theo ngày</p>
+            </div>
+            <div class="toolbar-actions">
+              <input type="date" id="adminDate" class="toolbar-date" />
+              <button class="btn btn-icon" id="btnLoadData" title="Tải lại dữ liệu">🔄</button>
+            </div>
+          </div>
 
           <div id="alertAdmin" class="alert"></div>
 
-          <div class="filter-row">
-            <div class="field">
-              <label for="adminDate">Chọn ngày</label>
-              <input type="date" id="adminDate" />
-            </div>
-            <button class="btn btn-primary" id="btnLoadData">Xem dữ liệu</button>
-          </div>
-
-          <div id="adminAttendanceList" class="data-list">
-            <p class="empty">Chưa có dữ liệu. Chọn ngày và bấm "Xem dữ liệu".</p>
+          <div id="adminAttendanceList" class="data-list attendance-list">
+            <p class="empty">Chưa có dữ liệu. Chọn ngày để xem.</p>
           </div>
         </div>
       </section>
@@ -213,7 +213,7 @@
           <h2>Danh sách nhân viên</h2>
           <p class="subtitle">Quản lý tài khoản, đổi mật khẩu, khoá/mở tài khoản.</p>
 
-          <div id="usersList" class="data-list">
+          <div id="usersList" class="data-list employee-list">
             <p class="empty">Chưa có nhân viên nào.</p>
           </div>
         </div>
