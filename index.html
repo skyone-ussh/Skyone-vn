@@ -272,7 +272,7 @@
     .alert-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid #FDE68A; }
     .alert-info { background: var(--info-bg); color: var(--primary-light); border: 1px solid #BFDBFE; }
 
-    /* ============ APP HEADER (sau khi đăng nhập) ============ */
+    /* ============ APP HEADER ============ */
     .app-header {
       background: #fff;
       border-bottom: 1px solid var(--border);
@@ -374,9 +374,7 @@
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
     /* ============ MAIN CONTENT ============ */
-    .app-main {
-      padding: 24px 0 60px;
-    }
+    .app-main { padding: 24px 0 60px; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
@@ -888,7 +886,7 @@
           </div>
 
           <div class="alert alert-info show" style="margin-top:8px;">
-            <strong>Ghi chú:</strong> Khi đổi vị trí, nhân viên cần mở lại app để load vị trí mới. Bán kính khuyến nghị 100–300m tùy quy mô khu vực làm việc.
+            <strong>Ghi chú:</strong> Khi đổi vị trí, nhân viên cần mở lại app hoặc bấm "Kiểm tra lại vị trí" để load vị trí mới. Bán kính khuyến nghị 100–300m tùy quy mô khu vực làm việc.
           </div>
         </div>
       </section>
@@ -914,6 +912,7 @@
   let currentEmployee = null;
   let currentAdminEmail = null;
   let employeeGeoState = { busy: false, pos: null, distance: null };
+  let autoRefreshTimer = null;
 
   /* =========================================================
      HELPERS
@@ -1000,7 +999,7 @@
   }
 
   /* =========================================================
-     EMPLOYEE SESSION (sessionStorage)
+     EMPLOYEE SESSION
      ========================================================= */
   function saveEmployeeSession(emp) {
     sessionStorage.setItem(EMP_SESSION_KEY, JSON.stringify(emp));
@@ -1021,10 +1020,7 @@
   function showScreen(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const target = $('screen-' + name);
-    if (target) {
-      if (name === 'login') target.classList.add('active');
-      else target.classList.add('active');
-    }
+    if (target) target.classList.add('active');
   }
 
   /* =========================================================
@@ -1034,7 +1030,6 @@
   const loginAlert = $('loginAlert');
   const btnLogin = $('btnLogin');
 
-  // Prefill remember me
   const remembered = loadRememberedLogin();
   if (remembered) {
     $('loginUsername').value = remembered.u || '';
@@ -1081,10 +1076,12 @@
         });
 
         $('loginPassword').value = '';
-        loginForm.reset();
-        if (remembered) {
-          $('loginUsername').value = remember ? rawUsername : '';
-          $('rememberMe').checked = remember;
+        if (!remember) {
+          loginForm.reset();
+        } else {
+          $('loginUsername').value = rawUsername;
+          $('loginPassword').value = password;
+          $('rememberMe').checked = true;
         }
 
         await openEmployeeDashboard(emp);
@@ -1110,9 +1107,11 @@
           else clearRememberedLogin();
 
           $('loginPassword').value = '';
-          loginForm.reset();
-          if (remember) {
+          if (!remember) {
+            loginForm.reset();
+          } else {
             $('loginUsername').value = rawUsername;
+            $('loginPassword').value = password;
             $('rememberMe').checked = true;
           }
 
@@ -1148,10 +1147,13 @@
     $('infoCheckout').textContent = '—';
     $('infoDistance').textContent = '—';
     $('btnEmpCheckout').style.display = 'none';
+    $('btnEmpCheckout').disabled = false;
+    $('btnEmpCheckout').textContent = 'Check-out';
 
     setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Vui lòng chờ trong giây lát');
     await loadSchoolLocation();
     await runAutoCheckin();
+    startAutoRefresh();
   }
 
   function setEmployeeStatus(kind, icon, title, desc) {
@@ -1183,6 +1185,7 @@
 
   async function runAutoCheckin() {
     if (employeeGeoState.busy) return;
+    if (!currentEmployee) return;
     employeeGeoState.busy = true;
 
     try {
@@ -1191,6 +1194,9 @@
       const pos = await getPosition();
       employeeGeoState.pos = pos;
 
+      if (attendanceLocation.lat == null) {
+        await loadSchoolLocation();
+      }
       if (attendanceLocation.lat == null) {
         setEmployeeStatus('error', '⚠️', 'Chưa cấu hình vị trí chấm công',
           'Admin chưa đặt vị trí trường. Vui lòng liên hệ quản lý.');
@@ -1227,18 +1233,18 @@
           return;
         }
 
-        // Đã check-in, chưa check-out
+        // Đã check-in, chưa check-out → LUÔN cho bấm check-out
+        $('btnEmpCheckout').style.display = 'inline-flex';
+        $('btnEmpCheckout').disabled = false;
+
         if (inRange) {
-          setEmployeeStatus('success', '✅', `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
-            'Bạn đang trong phạm vi. Bấm Check-out khi kết thúc ca làm việc.');
-          $('btnEmpCheckout').style.display = 'inline-flex';
-          $('btnEmpCheckout').disabled = false;
-        } else {
-          setEmployeeStatus('warning', '⚠️',
+          setEmployeeStatus('success', '✅',
             `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
-            `Bạn đang ở ngoài phạm vi (${Math.round(dist)}m / ${attendanceLocation.radiusMeters}m). Di chuyển vào phạm vi để check-out.`);
-          $('btnEmpCheckout').style.display = 'inline-flex';
-          $('btnEmpCheckout').disabled = true;
+            `Bạn đang trong phạm vi (cách ${Math.round(dist)}m). Bấm Check-out khi kết thúc ca làm việc.`);
+        } else {
+          setEmployeeStatus('warning', '📍',
+            `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
+            `Bạn đang ở ngoài phạm vi (cách ${Math.round(dist)}m, bán kính cho phép ${attendanceLocation.radiusMeters}m). Di chuyển vào trong phạm vi rồi bấm Check-out.`);
         }
         return;
       }
@@ -1247,6 +1253,7 @@
       if (!inRange) {
         setEmployeeStatus('warning', '📍', 'Bạn đang ở ngoài phạm vi chấm công',
           `Khoảng cách hiện tại: ${Math.round(dist)}m · Bán kính cho phép: ${attendanceLocation.radiusMeters}m. Di chuyển vào phạm vi để tự động chấm công.`);
+        $('btnEmpCheckout').style.display = 'none';
         return;
       }
 
@@ -1264,15 +1271,16 @@
       });
       if (insErr) throw insErr;
 
-      $('infoCheckin').textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      $('infoCheckin').textContent = nowStr;
       $('infoCheckout').textContent = '—';
 
       setEmployeeStatus('success', '✅', 'Chấm công thành công',
-        `Bạn đã được tự động check-in lúc ${fmtTime(new Date().toISOString())} · Cách vị trí ${Math.round(dist)}m`);
+        `Bạn đã được tự động check-in lúc ${nowStr} · Cách vị trí ${Math.round(dist)}m`);
       $('btnEmpCheckout').style.display = 'inline-flex';
       $('btnEmpCheckout').disabled = false;
     } catch (err) {
-      console.error(err);
+      console.error('Auto check-in error:', err);
       setEmployeeStatus('error', '❌', 'Không thể chấm công', err.message || 'Đã có lỗi xảy ra.');
     } finally {
       employeeGeoState.busy = false;
@@ -1284,45 +1292,85 @@
   $('btnEmpCheckout').addEventListener('click', async () => {
     if (!currentEmployee) return;
     const btn = $('btnEmpCheckout');
+
+    if (btn.disabled) return;
     btn.disabled = true;
     btn.textContent = 'Đang xử lý...';
 
     try {
-      setEmployeeStatus('loading', '⏳', 'Đang check-out...', 'Xác nhận vị trí của bạn');
+      // Đảm bảo đã load vị trí trường
+      if (attendanceLocation.lat == null) {
+        await loadSchoolLocation();
+      }
+      if (attendanceLocation.lat == null) {
+        throw new Error('Chưa có cấu hình vị trí trường. Vui lòng liên hệ quản lý.');
+      }
 
+      setEmployeeStatus('loading', '⏳', 'Đang check-out...', 'Đang xác định vị trí của bạn');
+
+      // Lấy vị trí hiện tại
       const pos = await getPosition();
       const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
 
+      $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
+
+      // Kiểm tra phạm vi
       if (dist > attendanceLocation.radiusMeters) {
-        throw new Error(`Bạn đang ngoài phạm vi (${Math.round(dist)}m). Cần ở trong phạm vi ${attendanceLocation.radiusMeters}m để check-out.`);
+        setEmployeeStatus('warning', '📍',
+          'Bạn đang ngoài phạm vi',
+          `Hiện cách vị trí chấm công ${Math.round(dist)}m, cần ở trong bán kính ${attendanceLocation.radiusMeters}m. Hãy di chuyển lại gần và bấm Check-out lại.`);
+        btn.disabled = false;
+        btn.textContent = 'Check-out';
+        return;
       }
 
+      // Tìm bản ghi hôm nay
       const today = todayISO();
       const { data: rows, error: qErr } = await supabaseClient
-        .from('attendance').select('id, check_out_time')
+        .from('attendance')
+        .select('id, check_out_time')
         .eq('employee_id', currentEmployee.username)
         .eq('work_date', today)
-        .order('check_in_time', { ascending: false }).limit(1);
+        .order('check_in_time', { ascending: false })
+        .limit(1);
       if (qErr) throw qErr;
 
-      if (!rows || rows.length === 0) throw new Error('Không tìm thấy lượt check-in hôm nay.');
-      if (rows[0].check_out_time) throw new Error('Bạn đã check-out hôm nay rồi.');
+      if (!rows || rows.length === 0) {
+        throw new Error('Không tìm thấy lượt check-in hôm nay. Vui lòng bấm "Kiểm tra lại vị trí".');
+      }
+      if (rows[0].check_out_time) {
+        $('infoCheckout').textContent = fmtTime(rows[0].check_out_time);
+        setEmployeeStatus('success', '✅', 'Đã check-out trước đó',
+          `Bạn đã kết thúc ca làm việc lúc ${fmtTime(rows[0].check_out_time)}`);
+        btn.style.display = 'none';
+        return;
+      }
 
-      const { error: upErr } = await supabaseClient.from('attendance').update({
-        check_out_time: new Date().toISOString(),
-        check_out_lat: pos.lat,
-        check_out_lng: pos.lng,
-        check_out_distance: dist,
-      }).eq('id', rows[0].id);
+      // Cập nhật giờ ra
+      const { error: upErr } = await supabaseClient
+        .from('attendance')
+        .update({
+          check_out_time: new Date().toISOString(),
+          check_out_lat: pos.lat,
+          check_out_lng: pos.lng,
+          check_out_distance: dist,
+        })
+        .eq('id', rows[0].id);
       if (upErr) throw upErr;
 
-      $('infoCheckout').textContent = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      $('infoCheckout').textContent = nowStr;
+
       setEmployeeStatus('success', '✅', 'Check-out thành công',
-        `Bạn đã kết thúc ca làm việc lúc ${fmtTime(new Date().toISOString())}`);
+        `Bạn đã kết thúc ca làm việc lúc ${nowStr}. Hẹn gặp lại!`);
       btn.style.display = 'none';
     } catch (err) {
-      console.error(err);
-      setEmployeeStatus('error', '❌', 'Không thể check-out', err.message || 'Đã có lỗi xảy ra.');
+      console.error('Check-out error:', err);
+      let msg = err.message || 'Đã có lỗi xảy ra.';
+      if (err.code === 1 || /denied/i.test(msg)) {
+        msg = 'Bạn đã từ chối quyền định vị. Vào Cài đặt trình duyệt → bật lại quyền Location cho trang này.';
+      }
+      setEmployeeStatus('error', '❌', 'Không thể check-out', msg);
       btn.disabled = false;
     } finally {
       btn.textContent = 'Check-out';
@@ -1330,10 +1378,33 @@
   });
 
   $('btnEmpLogout').addEventListener('click', () => {
+    stopAutoRefresh();
     clearEmployeeSession();
     currentEmployee = null;
+    employeeGeoState = { busy: false, pos: null, distance: null };
     showScreen('login');
   });
+
+  /* =========================================================
+     AUTO REFRESH LOCATION (30s)
+     ========================================================= */
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshTimer = setInterval(() => {
+      if ($('screen-employee').classList.contains('active')
+          && currentEmployee
+          && !employeeGeoState.busy) {
+        runAutoCheckin();
+      }
+    }, 30000);
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
+  }
 
   /* =========================================================
      ADMIN DASHBOARD
@@ -1348,7 +1419,6 @@
     await loadEmployees();
   }
 
-  // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const name = tab.dataset.tab;
@@ -1611,7 +1681,7 @@
   });
 
   /* =========================================================
-     BOOTSTRAP — kiểm tra session & quyết định màn hình
+     BOOTSTRAP
      ========================================================= */
   async function bootstrap() {
     // 1) Admin session?
@@ -1640,7 +1710,6 @@
     showScreen('login');
   }
 
-  // Lắng nghe auth state changes (đăng nhập / xuất admin)
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_OUT' && !currentEmployee) {
       showScreen('login');
