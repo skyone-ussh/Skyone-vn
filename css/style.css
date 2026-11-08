@@ -159,6 +159,10 @@ body {
 .btn-danger:not(:disabled):hover { background: var(--error-bg); }
 .btn-block { width: 100%; }
 .btn-sm { padding: 6px 10px; font-size: 12px; min-height: 32px; }
+.btn-icon {
+  width: 42px; height: 42px; min-height: 42px; padding: 0;
+  flex-shrink: 0; font-size: 16px;
+}
 
 /* ============ ALERTS ============ */
 .alert {
@@ -211,9 +215,7 @@ body {
   background: #fff; border-bottom: 1px solid var(--border);
   position: sticky; top: 57px; z-index: 90;
 }
-.app-tabs .container {
-  display: flex; gap: 0;
-}
+.app-tabs .container { display: flex; gap: 0; }
 .tab {
   flex: 1 1 0; min-width: 0;
   padding: 12px 8px; font-size: 13px; font-weight: 600;
@@ -239,6 +241,51 @@ body {
 .card + .card { margin-top: 14px; }
 .card h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
 .card > .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+/* ============ CARD TOOLBAR (Fix 1) ============ */
+.card-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.card-toolbar-title { min-width: 0; flex: 1 1 200px; }
+.card-toolbar-title h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+.card-toolbar-title .subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.toolbar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.toolbar-date {
+  padding: 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  background: #FAFBFC;
+  color: var(--text);
+  height: 42px;
+  min-width: 150px;
+}
+.toolbar-date:focus {
+  outline: none;
+  border-color: var(--primary-light);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
+}
 
 /* ============ EMPLOYEE HERO ============ */
 .employee-hero {
@@ -302,27 +349,26 @@ body {
 }
 .actions-row .btn { flex: 1 1 140px; }
 
-/* ============ FILTER ROW ============ */
-.filter-row {
-  display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-.filter-row .field { flex: 1 1 180px; margin: 0; min-width: 0; }
-.filter-row .btn { flex: 0 0 auto; }
-
 /* ============ DATA LIST (cards) ============ */
 .data-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 4px;
 }
 .data-list .empty {
   grid-column: 1 / -1;
   text-align: center; padding: 40px 20px;
   color: var(--text-muted); font-size: 13px;
 }
+.attendance-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.employee-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
 
+/* ============ DATA CARD BASE ============ */
 .data-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -335,50 +381,6 @@ body {
   overflow: hidden;
 }
 
-.data-card-head {
-  display: flex; justify-content: space-between;
-  align-items: flex-start; gap: 8px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-}
-.data-card-title { min-width: 0; flex: 1 1 auto; }
-.data-card-title h3 {
-  font-size: 14px; font-weight: 700; color: var(--text);
-  margin-bottom: 2px; word-break: break-word;
-}
-.data-card-title code {
-  font-size: 11px; color: var(--text-muted);
-  font-family: 'SF Mono', monospace;
-  word-break: break-all;
-}
-.data-card-index {
-  font-size: 11px; color: var(--text-muted);
-  font-weight: 600; flex-shrink: 0;
-}
-
-.data-card-body {
-  display: flex; flex-direction: column; gap: 6px;
-}
-.data-row {
-  display: flex; justify-content: space-between;
-  align-items: flex-start; gap: 8px;
-  font-size: 13px;
-}
-.data-label {
-  color: var(--text-muted); font-size: 12px; flex-shrink: 0;
-}
-.data-value {
-  font-weight: 600; color: var(--text);
-  text-align: right; word-break: break-word;
-  min-width: 0;
-}
-.data-value .cell-mono {
-  font-family: 'SF Mono', 'Courier New', monospace;
-  font-size: 11px; color: var(--text-muted); font-weight: 500;
-  display: block;
-}
-.data-value .muted { color: var(--text-muted); font-weight: 400; }
-
 .data-card-actions {
   display: flex; gap: 6px; flex-wrap: wrap;
   padding-top: 8px; border-top: 1px solid var(--border);
@@ -388,11 +390,130 @@ body {
   flex: 1 1 auto; min-width: 68px;
 }
 
+/* ============ ATTENDANCE CARD (Fix 2) ============ */
+.attendance-card {
+  padding: 12px 14px;
+  gap: 10px;
+}
+.attendance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.attendance-head > div { min-width: 0; flex: 1 1 auto; }
+.attendance-head h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+  word-break: break-word;
+  line-height: 1.35;
+}
+.attendance-head code {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', monospace;
+  word-break: break-all;
+}
+
+.attendance-times {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.time-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.time-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.time-value.muted {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 14px;
+}
+.time-divider {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.4;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* ============ EMPLOYEE CARD (Fix 3) ============ */
+.employee-card {
+  padding: 14px;
+  gap: 10px;
+}
+.employee-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.employee-head > div { min-width: 0; flex: 1 1 auto; }
+.employee-head h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  word-break: break-word;
+  line-height: 1.35;
+}
+.employee-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.employee-meta code {
+  font-family: 'SF Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+.employee-meta .meta-sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-weight: 400;
+}
+.employee-meta .meta-phone {
+  color: var(--text);
+  font-weight: 500;
+}
+
 /* ============ PILLS ============ */
 .pill {
   display: inline-block; padding: 3px 9px; border-radius: 999px;
   font-size: 10px; font-weight: 700; white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 .pill-ok { background: var(--success-bg); color: var(--success); }
 .pill-fail { background: var(--error-bg); color: var(--error); }
@@ -433,7 +554,6 @@ body {
   .login-brand h1 { font-size: 17px; }
   .brand-mark { width: 64px; height: 64px; font-size: 20px; }
   .card { padding: 22px; }
-  .data-list { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
   .btn-block-mobile { width: auto; }
   .app-tabs .container { gap: 4px; }
   .tab { flex: 0 1 auto; padding: 14px 18px; }
@@ -442,8 +562,19 @@ body {
   .status-icon { width: 72px; height: 72px; font-size: 32px; }
   .status-title { font-size: 18px; }
   .data-card { padding: 16px; }
+  .attendance-card { padding: 14px 16px; }
+  .attendance-head h3 { font-size: 15px; }
+  .time-value { font-size: 16px; }
+  .card-toolbar-title h2 { font-size: 17px; }
 }
 
 @media (min-width: 1024px) {
-  .data-list { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .employee-list { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+}
+
+@media (max-width: 400px) {
+  .toolbar-actions { width: 100%; }
+  .toolbar-date { flex: 1; min-width: 0; }
+  .attendance-times { padding: 9px 10px; }
+  .time-value { font-size: 14px; }
 }
