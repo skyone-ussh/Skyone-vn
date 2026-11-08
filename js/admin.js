@@ -9,9 +9,13 @@ async function openAdminDashboard(email) {
   $('adminDate').value = todayISO();
   await loadSettingsForAdmin();
   await loadEmployees();
+  // Auto-load dữ liệu chấm công ngày hôm nay
+  await loadAttendanceData();
 }
 
-/* ========== RENDER CARDS ========== */
+/* =========================================================
+   RENDER — Attendance Card (Fix 2: gọn, không vị trí, giờ vào/ra cùng dòng)
+   ========================================================= */
 function renderAttendanceList(data) {
   const list = $('adminAttendanceList');
 
@@ -20,41 +24,33 @@ function renderAttendanceList(data) {
     return;
   }
 
-  list.innerHTML = data.map((row, i) => {
-    const inPos = row.check_in_lat != null
-      ? `<span class="cell-mono">${fmtCoord(row.check_in_lat, row.check_in_lng)}</span>
-         ${row.check_in_distance != null ? `<span class="cell-mono">${Math.round(row.check_in_distance)}m</span>` : ''}`
-      : '<span class="muted">—</span>';
-    const outPos = row.check_out_lat != null
-      ? `<span class="cell-mono">${fmtCoord(row.check_out_lat, row.check_out_lng)}</span>
-         ${row.check_out_distance != null ? `<span class="cell-mono">${Math.round(row.check_out_distance)}m</span>` : ''}`
-      : '<span class="muted">—</span>';
+  list.innerHTML = data.map((row) => {
+    const hasOut = !!row.check_out_time;
+    const inTime  = fmtTime(row.check_in_time);
+    const outTime = hasOut ? fmtTime(row.check_out_time) : '—';
+    const outClass = hasOut ? 'time-value' : 'time-value muted';
+    const statusPill = hasOut
+      ? '<span class="pill pill-ok">Đã về</span>'
+      : '<span class="pill pill-wait">Đang làm</span>';
 
     return `
-      <article class="data-card">
-        <header class="data-card-head">
-          <div class="data-card-title">
+      <article class="data-card attendance-card">
+        <header class="attendance-head">
+          <div>
             <h3>${escapeHtml(row.employee_name)}</h3>
             <code>${escapeHtml(row.employee_id || '')}</code>
           </div>
-          <span class="data-card-index">#${i + 1}</span>
+          ${statusPill}
         </header>
-        <div class="data-card-body">
-          <div class="data-row">
-            <span class="data-label">Giờ vào</span>
-            <span class="data-value">${fmtTime(row.check_in_time)}</span>
+        <div class="attendance-times">
+          <div class="time-block">
+            <span class="time-label">Vào</span>
+            <span class="time-value">${inTime}</span>
           </div>
-          <div class="data-row">
-            <span class="data-label">Giờ ra</span>
-            <span class="data-value">${fmtTime(row.check_out_time)}</span>
-          </div>
-          <div class="data-row">
-            <span class="data-label">Vị trí vào</span>
-            <span class="data-value">${inPos}</span>
-          </div>
-          <div class="data-row">
-            <span class="data-label">Vị trí ra</span>
-            <span class="data-value">${outPos}</span>
+          <div class="time-divider">→</div>
+          <div class="time-block">
+            <span class="time-label">Ra</span>
+            <span class="${outClass}">${outTime}</span>
           </div>
         </div>
       </article>
@@ -62,6 +58,9 @@ function renderAttendanceList(data) {
   }).join('');
 }
 
+/* =========================================================
+   RENDER — Employee Card (Fix 3: bỏ STT, SĐT cùng dòng username)
+   ========================================================= */
 function renderEmployeeList(data) {
   const list = $('usersList');
 
@@ -70,35 +69,39 @@ function renderEmployeeList(data) {
     return;
   }
 
-  list.innerHTML = data.map((e, i) => `
-    <article class="data-card">
-      <header class="data-card-head">
-        <div class="data-card-title">
-          <h3>${escapeHtml(e.display_name)}</h3>
-          <code>${escapeHtml(e.username)}</code>
-        </div>
-        <span class="pill ${e.active ? 'pill-ok' : 'pill-fail'}">${e.active ? 'Hoạt động' : 'Đã khoá'}</span>
-      </header>
-      <div class="data-card-body">
-        <div class="data-row">
-          <span class="data-label">SĐT</span>
-          <span class="data-value">${e.phone ? escapeHtml(e.phone) : '<span class="muted">—</span>'}</span>
-        </div>
-        <div class="data-row">
-          <span class="data-label">STT</span>
-          <span class="data-value">${i + 1}</span>
-        </div>
-      </div>
-      <footer class="data-card-actions">
-        <button class="btn btn-outline btn-sm" data-action="reset" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Mật khẩu</button>
-        <button class="btn btn-outline btn-sm" data-action="toggle" data-id="${e.id}" data-active="${e.active}">${e.active ? 'Khoá' : 'Mở'}</button>
-        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Xoá</button>
-      </footer>
-    </article>
-  `).join('');
+  list.innerHTML = data.map((e) => {
+    const phonePart = e.phone
+      ? `<span class="meta-sep">·</span><span class="meta-phone">${escapeHtml(e.phone)}</span>`
+      : '';
+    const statusPill = e.active
+      ? '<span class="pill pill-ok">Hoạt động</span>'
+      : '<span class="pill pill-fail">Đã khoá</span>';
+
+    return `
+      <article class="data-card employee-card">
+        <header class="employee-head">
+          <div>
+            <h3>${escapeHtml(e.display_name)}</h3>
+            <div class="employee-meta">
+              <code>${escapeHtml(e.username)}</code>
+              ${phonePart}
+            </div>
+          </div>
+          ${statusPill}
+        </header>
+        <footer class="data-card-actions">
+          <button class="btn btn-outline btn-sm" data-action="reset" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Mật khẩu</button>
+          <button class="btn btn-outline btn-sm" data-action="toggle" data-id="${e.id}" data-active="${e.active}">${e.active ? 'Khoá' : 'Mở'}</button>
+          <button class="btn btn-danger btn-sm" data-action="delete" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Xoá</button>
+        </footer>
+      </article>
+    `;
+  }).join('');
 }
 
-/* ========== DATA LOADERS ========== */
+/* =========================================================
+   DATA LOADERS
+   ========================================================= */
 async function loadSettingsForAdmin() {
   try {
     const { data, error } = await supabaseClient
@@ -138,7 +141,39 @@ async function loadEmployees() {
   }
 }
 
-/* ========== HANDLERS ========== */
+async function loadAttendanceData() {
+  const alertEl = $('alertAdmin');
+  const btn = $('btnLoadData');
+  const date = $('adminDate').value;
+
+  hideAlert(alertEl);
+  if (!date) {
+    showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('attendance').select('*').eq('work_date', date)
+      .order('check_in_time', { ascending: true });
+    if (error) throw error;
+    renderAttendanceList(data);
+  } catch (err) {
+    console.error(err);
+    showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
+    $('adminAttendanceList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄';
+  }
+}
+
+/* =========================================================
+   HANDLERS
+   ========================================================= */
 function initAdminHandlers() {
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
@@ -148,8 +183,17 @@ function initAdminHandlers() {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
       if (name === 'settings') loadSettingsForAdmin();
       if (name === 'users')    loadEmployees();
+      if (name === 'attendance' && !$('adminAttendanceList').innerHTML.trim()) {
+        loadAttendanceData();
+      }
     });
   });
+
+  // Date change → auto load (Fix 1)
+  $('adminDate').addEventListener('change', () => loadAttendanceData());
+
+  // Nút refresh icon
+  $('btnLoadData').addEventListener('click', () => loadAttendanceData());
 
   // Đặt vị trí
   $('btnSetLocation').addEventListener('click', async () => {
@@ -186,37 +230,6 @@ function initAdminHandlers() {
     } finally {
       btn.disabled = false;
       btn.textContent = '📍 Đặt vị trí hiện tại';
-    }
-  });
-
-  // Load dữ liệu chấm công
-  $('btnLoadData').addEventListener('click', async () => {
-    const alertEl = $('alertAdmin');
-    const btn = $('btnLoadData');
-    hideAlert(alertEl);
-
-    const date = $('adminDate').value;
-    if (!date) {
-      showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Đang tải...';
-
-    try {
-      const { data, error } = await supabaseClient
-        .from('attendance').select('*').eq('work_date', date)
-        .order('check_in_time', { ascending: true });
-      if (error) throw error;
-      renderAttendanceList(data);
-    } catch (err) {
-      console.error(err);
-      showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
-      $('adminAttendanceList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Xem dữ liệu';
     }
   });
 
