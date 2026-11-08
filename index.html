@@ -2,14 +2,10 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -27,13 +23,35 @@
       --warning: #b45309;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
+
+    /* ===== FIX 1: KHOÁ KHUNG TRANG — không scroll ngang ===== */
+    html {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+    }
+    body {
       font-family: 'Be Vietnam Pro', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+      position: relative;
+      -webkit-text-size-adjust: 100%;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    #app-root {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      width: 100%;
+    }
 
     /* HEADER */
     header {
@@ -45,35 +63,37 @@
     .header-inner {
       display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
     }
-    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
     .brand-logo {
       width: 48px; height: 48px; border-radius: 50%;
       background: var(--white); color: var(--primary);
       display: flex; align-items: center; justify-content: center;
       font-weight: 800; font-size: 16px; flex-shrink: 0;
     }
+    .brand-text { min-width: 0; }
     .brand-text h1 { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; line-height: 1.3; }
     .brand-text span { font-size: 12px; opacity: 0.85; }
     .admin-btn {
       background: rgba(255,255,255,0.15); color: var(--white);
       border: 1px solid rgba(255,255,255,0.3);
       padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
-      cursor: pointer; font-family: inherit;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
     }
     .admin-btn:hover { background: rgba(255,255,255,0.25); }
     .admin-info { font-size: 12px; text-align: right; line-height: 1.4; }
-    .admin-info strong { display: block; font-size: 13px; }
+    .admin-info strong { display: block; font-size: 13px; word-break: break-all; }
 
     /* TABS */
     .tabs {
       background: var(--white); border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 50;
     }
-    .tabs-inner { display: flex; gap: 4px; }
+    .tabs-inner { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tabs-inner::-webkit-scrollbar { display: none; }
     .tab {
       padding: 14px 20px; font-size: 14px; font-weight: 600;
       color: var(--muted); border: none; background: transparent;
-      cursor: pointer; font-family: inherit;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
       border-bottom: 3px solid transparent; transition: all 0.15s;
     }
     .tab:hover { color: var(--primary); }
@@ -87,8 +107,10 @@
     .card {
       background: var(--white); border: 1px solid var(--border);
       border-radius: 14px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      max-width: 100%;
     }
     .card h2 { font-size: 20px; color: var(--primary); margin-bottom: 6px; }
+    .card h3 { font-size: 16px; color: var(--primary); margin-bottom: 6px; }
     .card > p.sub { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
 
     /* FORM */
@@ -113,9 +135,9 @@
       border-radius: 10px; padding: 14px; font-size: 13px;
       margin: 8px 0 20px; line-height: 1.6;
     }
-    .location-box .row { display: flex; justify-content: space-between; gap: 12px; }
+    .location-box .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .location-box .label { color: var(--muted); }
-    .location-box .value { font-weight: 600; font-family: 'Courier New', monospace; }
+    .location-box .value { font-weight: 600; font-family: 'Courier New', monospace; word-break: break-all; }
     .status-pill {
       display: inline-block; padding: 4px 12px; border-radius: 999px;
       font-size: 12px; font-weight: 600;
@@ -135,6 +157,8 @@
     .btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,58,112,0.3); }
     .btn-outline { background: var(--white); color: var(--primary); border: 1.5px solid var(--primary); }
     .btn-outline:not(:disabled):hover { background: #f0f6fc; }
+    .btn-danger { background: var(--white); color: var(--error); border: 1.5px solid var(--error); }
+    .btn-danger:not(:disabled):hover { background: #fef2f2; }
 
     .alert {
       padding: 12px 14px; border-radius: 10px; font-size: 13px;
@@ -146,32 +170,37 @@
     .alert-warning { background: #fffbeb; color: var(--warning); border: 1px solid #fde68a; }
 
     /* TABLE */
-    .table-wrap { overflow-x: auto; margin-top: 20px; border-radius: 10px; border: 1px solid var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+    .table-wrap {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      margin-top: 20px; border-radius: 10px; border: 1px solid var(--border);
+      max-width: 100%;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
     th {
       background: #f4f7fb; color: var(--primary);
       text-align: left; padding: 12px 14px; font-weight: 700;
       font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
     }
     td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #fafbfc; }
-    .empty {
-      text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px;
-    }
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
     .cell-mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--muted); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row-actions .btn { flex: none; min-width: auto; padding: 6px 10px; font-size: 12px; }
 
     /* MODAL */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: none; align-items: center; justify-content: center;
-      z-index: 200; padding: 20px;
+      z-index: 200; padding: 20px; overflow-y: auto;
     }
     .modal-overlay.show { display: flex; }
     .modal {
       background: var(--white); border-radius: 14px; padding: 32px;
       width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      margin: auto;
     }
     .modal h3 { color: var(--primary); font-size: 18px; margin-bottom: 4px; }
     .modal p.sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
@@ -180,27 +209,33 @@
       cursor: pointer; color: var(--muted); line-height: 1;
     }
 
-    /* CONFIG WARNING */
     .config-warn {
       background: #fffbeb; border: 1px solid #fde68a; color: var(--warning);
       padding: 12px 16px; border-radius: 10px; font-size: 13px;
       margin-bottom: 20px; line-height: 1.6;
     }
-    .config-warn code {
-      background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px;
-      font-size: 12px;
+    .config-warn code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+    .divider-section { height: 1px; background: var(--border); margin: 24px 0; }
+
+    .add-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
+      margin-bottom: 16px;
     }
+    .add-grid .form-row { margin: 0; }
 
     @media (max-width: 640px) {
       .card { padding: 20px; }
       .brand-text h1 { font-size: 13px; }
       .brand-logo { width: 40px; height: 40px; font-size: 14px; }
+      .container { padding: 0 14px; }
+      .header-inner { gap: 10px; }
     }
   </style>
 </head>
 <body>
+<div id="app-root">
 
-  <!-- HEADER -->
   <header>
     <div class="container header-inner">
       <div class="brand">
@@ -210,7 +245,6 @@
           <span>Sky One · Hệ thống chấm công nhân viên vệ sinh</span>
         </div>
       </div>
-
       <div id="headerAdmin">
         <button class="admin-btn" id="btnOpenAdminLogin">Đăng nhập Admin</button>
       </div>
@@ -223,39 +257,39 @@
     </div>
   </header>
 
-  <!-- TABS -->
   <nav class="tabs">
     <div class="container tabs-inner">
       <button class="tab active" data-tab="attendance">Chấm công</button>
       <button class="tab" data-tab="adminView" id="tabAdminView" style="display:none;">Xem chấm công</button>
+      <button class="tab" data-tab="users"     id="tabUsers"     style="display:none;">Nhân viên</button>
     </div>
   </nav>
 
-  <!-- MAIN -->
   <main>
     <div class="container">
 
-      <!-- TAB 1: CHẤM CÔNG -->
+      <!-- ============ TAB 1: CHẤM CÔNG ============ -->
       <section id="panel-attendance" class="tab-panel active">
         <div class="card" style="max-width:560px;margin:0 auto;">
           <h2>Chấm công</h2>
-          <p class="sub">Nhập họ tên và mã nhân viên, sau đó chấm công khi đang ở trong phạm vi trường.</p>
+          <p class="sub">Nhập tên đăng nhập và mật khẩu do admin cấp, sau đó chấm công khi đang ở trong phạm vi trường.</p>
 
           <div id="configWarn" class="config-warn" style="display:none;"></div>
-
           <div id="alertAttend" class="alert"></div>
 
-          <form id="attendForm" autocomplete="off">
+          <form id="attendForm" autocomplete="on">
             <div class="form-row">
-              <label for="empName">Họ và tên <span style="color:var(--accent)">*</span></label>
-              <input type="text" id="empName" placeholder="Ví dụ: Nguyễn Văn A" required />
+              <label for="loginUsername">Tên đăng nhập <span style="color:var(--accent)">*</span></label>
+              <input type="text" id="loginUsername" placeholder="Tên đăng nhập do admin cấp"
+                     autocomplete="username" autocapitalize="none" spellcheck="false" required />
             </div>
             <div class="form-row">
-              <label for="empId">Mã nhân viên <span style="color:var(--accent)">*</span></label>
-              <input type="text" id="empId" placeholder="Mã do Sky One cấp" required />
+              <label for="loginPassword">Mật khẩu <span style="color:var(--accent)">*</span></label>
+              <input type="password" id="loginPassword" placeholder="Mật khẩu"
+                     autocomplete="current-password" required />
             </div>
 
-            <div class="location-box" id="locationBox">
+            <div class="location-box">
               <div class="row"><span class="label">Trạng thái định vị:</span><span id="locStatus" class="status-pill pill-wait">Chưa lấy vị trí</span></div>
               <div class="row" style="margin-top:6px;"><span class="label">Tọa độ hiện tại:</span><span class="value" id="locCoords">—</span></div>
               <div class="row" style="margin-top:6px;"><span class="label">Khoảng cách tới trường:</span><span class="value" id="locDistance">—</span></div>
@@ -272,11 +306,38 @@
         </div>
       </section>
 
-      <!-- TAB 2: ADMIN VIEW -->
+      <!-- ============ TAB 2: ADMIN VIEW ============ -->
       <section id="panel-adminView" class="tab-panel">
+
+        <!-- Cài đặt vị trí -->
+        <div class="card" style="margin-bottom:20px;">
+          <h2>Cài đặt vị trí chấm công</h2>
+          <p class="sub">Đứng tại vị trí trường (hoặc điểm cần chấm công) và bấm nút bên dưới để đặt làm vị trí chấm công.</p>
+
+          <div id="alertLocSetup" class="alert"></div>
+
+          <div style="background:#f0f6fc;border:1px solid #cfe2f3;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;">
+            <div class="row" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <span class="label" style="color:var(--muted);">Vị trí đã lưu:</span>
+              <span id="adminSavedLoc" class="value" style="font-weight:600;font-family:'Courier New',monospace;">Đang tải…</span>
+            </div>
+          </div>
+
+          <div class="add-grid">
+            <div class="form-row">
+              <label for="radiusInput">Bán kính cho phép (mét)</label>
+              <input type="number" id="radiusInput" min="10" step="10" value="200" />
+            </div>
+            <div class="form-row" style="display:flex;align-items:flex-end;">
+              <button class="btn btn-primary" id="btnSetLocation" style="width:100%;">📍 Đặt vị trí hiện tại</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bảng chấm công -->
         <div class="card">
           <h2>Bảng chấm công theo ngày</h2>
-          <p class="sub">Chỉ admin xem được. Chọn ngày để xem dữ liệu chấm công của toàn bộ nhân viên.</p>
+          <p class="sub">Chọn ngày để xem dữ liệu chấm công của toàn bộ nhân viên.</p>
 
           <div id="alertAdmin" class="alert"></div>
 
@@ -294,7 +355,7 @@
                 <tr>
                   <th style="width:50px;">STT</th>
                   <th>Họ tên</th>
-                  <th>Mã NV</th>
+                  <th>Tên đăng nhập</th>
                   <th>Giờ vào</th>
                   <th>Vị trí vào</th>
                   <th>Giờ ra</th>
@@ -309,6 +370,58 @@
         </div>
       </section>
 
+      <!-- ============ TAB 3: QUẢN LÝ NHÂN VIÊN ============ -->
+      <section id="panel-users" class="tab-panel">
+        <div class="card">
+          <h2>Quản lý nhân viên</h2>
+          <p class="sub">Thêm, sửa, khoá, xoá tài khoản đăng nhập của nhân viên vệ sinh.</p>
+
+          <div id="alertUsers" class="alert"></div>
+
+          <h3 style="margin-bottom:12px;">Thêm nhân viên mới</h3>
+          <div class="add-grid">
+            <div class="form-row">
+              <label for="newUsername">Tên đăng nhập *</label>
+              <input type="text" id="newUsername" placeholder="vd: nva" autocapitalize="none" spellcheck="false" />
+            </div>
+            <div class="form-row">
+              <label for="newPassword">Mật khẩu *</label>
+              <input type="password" id="newPassword" placeholder="Mật khẩu" />
+            </div>
+            <div class="form-row">
+              <label for="newDisplayName">Tên hiển thị *</label>
+              <input type="text" id="newDisplayName" placeholder="vd: Nguyễn Văn A" />
+            </div>
+            <div class="form-row">
+              <label for="newPhone">SĐT (không bắt buộc)</label>
+              <input type="tel" id="newPhone" placeholder="vd: 0901234567" />
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btnAddEmployee" style="flex:0;min-width:180px;width:auto;margin-bottom:8px;">+ Thêm nhân viên</button>
+
+          <div class="divider-section"></div>
+
+          <h3 style="margin-bottom:12px;">Danh sách nhân viên</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:50px;">STT</th>
+                  <th>Tên đăng nhập</th>
+                  <th>Tên hiển thị</th>
+                  <th>SĐT</th>
+                  <th>Trạng thái</th>
+                  <th style="width:200px;">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr><td colspan="6" class="empty">Chưa có nhân viên nào.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -317,14 +430,12 @@
     <div class="modal">
       <button class="modal-close" id="btnCloseAdminLogin">×</button>
       <h3>Đăng nhập Admin</h3>
-      <p class="sub">Chỉ tài khoản admin được cấp bởi Sky One / nhà trường mới xem được dữ liệu chấm công.</p>
-
+      <p class="sub">Chỉ tài khoản admin được cấp bởi Sky One / nhà trường.</p>
       <div id="alertLogin" class="alert"></div>
-
       <form id="adminLoginForm">
         <div class="form-row">
           <label for="adminEmail">Email</label>
-          <input type="email" id="adminEmail" placeholder="admin@..." required />
+          <input type="email" id="adminEmail" placeholder="admin@skyone.vn" required />
         </div>
         <div class="form-row">
           <label for="adminPassword">Mật khẩu</label>
@@ -335,524 +446,696 @@
     </div>
   </div>
 
-  <script>
-    /* =========================================================
-       CẤU HÌNH SUPABASE
-       ========================================================= */
-    const SUPABASE_URL      = 'https://wosgbrafpbigmbhhodov.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvc2dicmFmcGJpZ21iaGhvZG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMzgxNTksImV4cCI6MjEwOTcxNDE1OX0.KZ17Pgpaz7POXZ5K606Gb4obPOiw7TGMOLrYUvQg1NE';
+</div>
 
-    /* =========================================================
-       CẤU HÌNH VỊ TRÍ TRƯỜNG
-       → BẠN TỰ ĐIỀN:
-         - Mở Google Maps
-         - Chuột phải vào đúng cổng trường / vị trí làm việc
-         - Copy cặp số (vĩ độ, kinh độ) hiện ra
-       ========================================================= */
-    const UNIVERSITY_LOCATION = {
-      lat: null,            // TODO: điền vĩ độ (number)
-      lng: null,            // TODO: điền kinh độ (number)
-      radiusMeters: 200     // TODO: chỉnh bán kính cho phép (mét)
-    };
+<script>
+  /* =========================================================
+     CẤU HÌNH SUPABASE
+     ========================================================= */
+  const SUPABASE_URL      = 'https://wosgbrafpbigmbhhodov.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvc2dicmFmcGJpZ21iaGhvZG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMzgxNTksImV4cCI6MjEwOTcxNDE1OX0.KZ17Pgpaz7POXZ5K606Gb4obPOiw7TGMOLrYUvQg1NE';
 
-    /* =========================================================
-       KHỞI TẠO
-       ========================================================= */
-    const configOK =
-      !SUPABASE_URL.includes('YOUR-PROJECT') &&
-      !SUPABASE_ANON_KEY.includes('YOUR-ANON-KEY');
-    const locationOK =
-      typeof UNIVERSITY_LOCATION.lat === 'number' &&
-      typeof UNIVERSITY_LOCATION.lng === 'number';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const supabaseClient = configOK
-      ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-      : null;
+  /* Vị trí chấm công — động, load từ Supabase settings */
+  let attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
 
-    if (!locationOK) {
-      const w = document.getElementById('configWarn');
-      w.style.display = 'block';
-      w.innerHTML =
-        '<strong>Chưa cấu hình vị trí trường.</strong><br>' +
-        'Thiếu <code>UNIVERSITY_LOCATION.lat</code> / <code>lng</code> trong file. ' +
-        'Nút Check-in/Check-out sẽ bị khoá cho tới khi bạn điền.';
-    }
+  function locationIsOK() {
+    return typeof attendanceLocation.lat === 'number'
+        && typeof attendanceLocation.lng === 'number';
+  }
 
-    /* =========================================================
-       HELPERS
-       ========================================================= */
-    function showAlert(el, msg, type) {
-      el.textContent = msg;
-      el.className = 'alert show alert-' + (type || 'error');
-    }
-    function hideAlert(el) { el.className = 'alert'; }
-
-    function haversine(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const toRad = d => (d * Math.PI) / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat/2)**2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLon/2)**2;
-      return 2 * R * Math.asin(Math.sqrt(a));
-    }
-
-    function todayISO() {
-      const d = new Date();
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    }
-    function fmtTime(iso) {
-      if (!iso) return '—';
-      const d = new Date(iso);
-      return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    }
-    function fmtCoord(lat, lng) {
-      if (lat == null || lng == null) return '—';
-      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    }
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, m => ({
-        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-      }[m]));
-    }
-
-    /* =========================================================
-       TABS
-       ========================================================= */
-    const tabs = document.querySelectorAll('.tab');
-    const panels = {
-      attendance: document.getElementById('panel-attendance'),
-      adminView: document.getElementById('panel-adminView'),
-    };
-    function switchTab(name) {
-      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-      Object.entries(panels).forEach(([k, el]) =>
-        el.classList.toggle('active', k === name)
-      );
-      if (name === 'adminView') {
-        const d = document.getElementById('adminDate');
-        if (!d.value) d.value = todayISO();
-      }
-    }
-    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
-
-    /* =========================================================
-       TAB 1 — CHẤM CÔNG
-       ========================================================= */
-    const alertAttend   = document.getElementById('alertAttend');
-    const locStatusEl   = document.getElementById('locStatus');
-    const locCoordsEl   = document.getElementById('locCoords');
-    const locDistEl     = document.getElementById('locDistance');
-    const btnGetLoc     = document.getElementById('btnGetLocation');
-    const btnCheckin    = document.getElementById('btnCheckin');
-    const btnCheckout   = document.getElementById('btnCheckout');
-
-    let currentPos = null;
-    let distanceToSchool = null;
-    let inRange = false;
-
-    function updateLocationUI() {
-      if (!currentPos) {
-        locStatusEl.className = 'status-pill pill-wait';
-        locStatusEl.textContent = 'Chưa lấy vị trí';
-        return;
-      }
-      locCoordsEl.textContent = fmtCoord(currentPos.lat, currentPos.lng);
-
-      if (!locationOK) {
-        locStatusEl.className = 'status-pill pill-fail';
-        locStatusEl.textContent = 'Chưa cấu hình vị trí trường';
-        locDistEl.textContent = '—';
-        btnCheckin.disabled = true;
-        btnCheckout.disabled = true;
-        return;
-      }
-
-      distanceToSchool = haversine(
-        currentPos.lat, currentPos.lng,
-        UNIVERSITY_LOCATION.lat, UNIVERSITY_LOCATION.lng
-      );
-      locDistEl.textContent = distanceToSchool.toFixed(0) + ' m (bán kính ' +
-        UNIVERSITY_LOCATION.radiusMeters + ' m)';
-
-      inRange = distanceToSchool <= UNIVERSITY_LOCATION.radiusMeters;
-      if (inRange) {
-        locStatusEl.className = 'status-pill pill-ok';
-        locStatusEl.textContent = '✅ Trong phạm vi';
+  async function loadSchoolLocation() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('settings').select('*').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      if (data && data.university_lat != null && data.university_lng != null) {
+        attendanceLocation = {
+          lat: data.university_lat,
+          lng: data.university_lng,
+          radiusMeters: data.radius_meters || 200,
+        };
       } else {
-        locStatusEl.className = 'status-pill pill-fail';
-        locStatusEl.textContent = '❌ Ngoài phạm vi';
+        attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
       }
+    } catch (err) {
+      console.warn('Không load được settings:', err);
+    }
+  }
 
-      const canSubmit = inRange && configOK;
-      btnCheckin.disabled  = !canSubmit;
-      btnCheckout.disabled = !canSubmit;
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+  function showAlert(el, msg, type) {
+    el.textContent = msg;
+    el.className = 'alert show alert-' + (type || 'error');
+  }
+  function hideAlert(el) { el.className = 'alert'; }
+
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtCoord(lat, lng) {
+    if (lat == null || lng == null) return '—';
+    return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  /* =========================================================
+     TABS
+     ========================================================= */
+  const tabs = document.querySelectorAll('.tab');
+  const panels = {
+    attendance: document.getElementById('panel-attendance'),
+    adminView:  document.getElementById('panel-adminView'),
+    users:      document.getElementById('panel-users'),
+  };
+  function switchTab(name) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    Object.entries(panels).forEach(([k, el]) => el.classList.toggle('active', k === name));
+    if (name === 'adminView') {
+      const d = document.getElementById('adminDate');
+      if (!d.value) d.value = todayISO();
+      loadSettingsForAdmin();
+    }
+    if (name === 'users') loadEmployees();
+  }
+  tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+  /* =========================================================
+     TAB 1 — CHẤM CÔNG
+     ========================================================= */
+  const alertAttend = document.getElementById('alertAttend');
+  const locStatusEl = document.getElementById('locStatus');
+  const locCoordsEl = document.getElementById('locCoords');
+  const locDistEl   = document.getElementById('locDistance');
+  const btnGetLoc   = document.getElementById('btnGetLocation');
+  const btnCheckin  = document.getElementById('btnCheckin');
+  const btnCheckout = document.getElementById('btnCheckout');
+
+  let currentPos = null;
+  let distanceToSchool = null;
+  let inRange = false;
+
+  function updateLocationUI() {
+    if (!currentPos) {
+      locStatusEl.className = 'status-pill pill-wait';
+      locStatusEl.textContent = 'Chưa lấy vị trí';
+      return;
+    }
+    locCoordsEl.textContent = fmtCoord(currentPos.lat, currentPos.lng);
+
+    if (!locationIsOK()) {
+      locStatusEl.className = 'status-pill pill-fail';
+      locStatusEl.textContent = 'Admin chưa cài đặt vị trí trường';
+      locDistEl.textContent = '—';
+      btnCheckin.disabled = true;
+      btnCheckout.disabled = true;
+      return;
     }
 
-    btnGetLoc.addEventListener('click', () => {
-      hideAlert(alertAttend);
-      if (!navigator.geolocation) {
-        showAlert(alertAttend, 'Trình duyệt không hỗ trợ định vị.', 'error');
-        return;
-      }
-      locStatusEl.className = 'status-pill pill-wait';
-      locStatusEl.textContent = 'Đang lấy vị trí...';
-      btnGetLoc.disabled = true;
+    distanceToSchool = haversine(
+      currentPos.lat, currentPos.lng,
+      attendanceLocation.lat, attendanceLocation.lng
+    );
+    locDistEl.textContent = distanceToSchool.toFixed(0) + ' m (bán kính ' +
+      attendanceLocation.radiusMeters + ' m)';
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          currentPos = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-          };
-          updateLocationUI();
-          btnGetLoc.disabled = false;
-        },
-        (err) => {
-          let msg = 'Không lấy được vị trí.';
-          if (err.code === err.PERMISSION_DENIED)
-            msg = 'Bạn đã từ chối quyền định vị. Hãy bật lại trong cài đặt trình duyệt.';
-          else if (err.code === err.POSITION_UNAVAILABLE)
-            msg = 'Không xác định được vị trí. Kiểm tra GPS / mạng.';
-          else if (err.code === err.TIMEOUT)
-            msg = 'Hết thời gian chờ định vị. Thử lại.';
-          showAlert(alertAttend, msg, 'error');
-          locStatusEl.className = 'status-pill pill-fail';
-          locStatusEl.textContent = 'Lỗi định vị';
-          btnGetLoc.disabled = false;
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
+    inRange = distanceToSchool <= attendanceLocation.radiusMeters;
+    if (inRange) {
+      locStatusEl.className = 'status-pill pill-ok';
+      locStatusEl.textContent = '✅ Trong phạm vi';
+    } else {
+      locStatusEl.className = 'status-pill pill-fail';
+      locStatusEl.textContent = '❌ Ngoài phạm vi';
+    }
+    btnCheckin.disabled  = !inRange;
+    btnCheckout.disabled = !inRange;
+  }
+
+  btnGetLoc.addEventListener('click', async () => {
+    hideAlert(alertAttend);
+    if (!navigator.geolocation) {
+      showAlert(alertAttend, 'Trình duyệt không hỗ trợ định vị.', 'error');
+      return;
+    }
+    locStatusEl.className = 'status-pill pill-wait';
+    locStatusEl.textContent = 'Đang lấy vị trí...';
+    btnGetLoc.disabled = true;
+
+    // Refresh vị trí trường từ Supabase mỗi lần bấm
+    await loadSchoolLocation();
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        currentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        updateLocationUI();
+        btnGetLoc.disabled = false;
+      },
+      (err) => {
+        let msg = 'Không lấy được vị trí.';
+        if (err.code === err.PERMISSION_DENIED)
+          msg = 'Bạn đã từ chối quyền định vị. Hãy bật lại trong cài đặt trình duyệt.';
+        else if (err.code === err.POSITION_UNAVAILABLE)
+          msg = 'Không xác định được vị trí. Kiểm tra GPS / mạng.';
+        else if (err.code === err.TIMEOUT)
+          msg = 'Hết thời gian chờ định vị. Thử lại.';
+        showAlert(alertAttend, msg, 'error');
+        locStatusEl.className = 'status-pill pill-fail';
+        locStatusEl.textContent = 'Lỗi định vị';
+        btnGetLoc.disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
+
+  async function verifyEmployee(username, password) {
+    const { data, error } = await supabaseClient.rpc('verify_employee', {
+      p_username: username,
+      p_password: password,
     });
+    if (error) throw error;
+    return (data && data.length > 0) ? data[0] : null;
+  }
+
+  document.getElementById('attendForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert(alertAttend);
+
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!username || !password) {
+      showAlert(alertAttend, 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'error');
+      return;
+    }
+    if (!currentPos || !inRange) {
+      showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
+      return;
+    }
 
     btnCheckin.disabled = true;
-    btnCheckout.disabled = true;
+    btnCheckin.textContent = 'Đang xác thực...';
 
-    document.getElementById('attendForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideAlert(alertAttend);
-
-      const name = document.getElementById('empName').value.trim();
-      const id   = document.getElementById('empId').value.trim();
-
-      if (!name || !id) {
-        showAlert(alertAttend, 'Vui lòng nhập họ tên và mã nhân viên.', 'error');
-        return;
-      }
-      if (!currentPos || !inRange) {
-        showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
-        return;
-      }
-      if (!configOK) {
-        showAlert(alertAttend, 'Chưa cấu hình Supabase — không thể lưu dữ liệu.', 'error');
+    try {
+      const emp = await verifyEmployee(username, password);
+      if (!emp) {
+        showAlert(alertAttend, 'Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khoá.', 'error');
         return;
       }
 
-      btnCheckin.disabled = true;
       btnCheckin.textContent = 'Đang lưu...';
+      const today = todayISO();
 
-      try {
-        const today = todayISO();
-
-        const { data: existing, error: qErr } = await supabaseClient
-          .from('attendance')
-          .select('id, check_in_time, check_out_time')
-          .eq('employee_id', id)
-          .eq('work_date', today)
-          .order('check_in_time', { ascending: false })
-          .limit(1);
-
-        if (qErr) throw qErr;
-
-        if (existing && existing.length > 0) {
-          showAlert(alertAttend, 'Nhân viên này đã check-in hôm nay rồi.', 'warning');
-          return;
-        }
-
-        const { error: insErr } = await supabaseClient.from('attendance').insert({
-          employee_name: name,
-          employee_id: id,
-          work_date: today,
-          check_in_time: new Date().toISOString(),
-          check_in_lat: currentPos.lat,
-          check_in_lng: currentPos.lng,
-          check_in_distance: distanceToSchool,
-        });
-
-        if (insErr) throw insErr;
-
-        showAlert(alertAttend, '✅ Check-in thành công lúc ' +
-          new Date().toLocaleTimeString('vi-VN') + '.', 'success');
-      } catch (err) {
-        console.error(err);
-        showAlert(alertAttend, 'Lỗi check-in: ' + (err.message || err), 'error');
-      } finally {
-        btnCheckin.textContent = 'Check-in';
-        btnCheckin.disabled = !inRange || !configOK;
-      }
-    });
-
-    btnCheckout.addEventListener('click', async () => {
-      hideAlert(alertAttend);
-
-      const id = document.getElementById('empId').value.trim();
-
-      if (!id) {
-        showAlert(alertAttend, 'Vui lòng nhập mã nhân viên.', 'error');
-        return;
-      }
-      if (!currentPos || !inRange) {
-        showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
-        return;
-      }
-      if (!configOK) {
-        showAlert(alertAttend, 'Chưa cấu hình Supabase — không thể lưu dữ liệu.', 'error');
+      const { data: existing, error: qErr } = await supabaseClient
+        .from('attendance').select('id')
+        .eq('employee_id', emp.username).eq('work_date', today).limit(1);
+      if (qErr) throw qErr;
+      if (existing && existing.length > 0) {
+        showAlert(alertAttend, `${emp.display_name} đã check-in hôm nay rồi.`, 'warning');
         return;
       }
 
-      btnCheckout.disabled = true;
+      const { error: insErr } = await supabaseClient.from('attendance').insert({
+        employee_name: emp.display_name,
+        employee_id:   emp.username,
+        work_date:     today,
+        check_in_time: new Date().toISOString(),
+        check_in_lat:  currentPos.lat,
+        check_in_lng:  currentPos.lng,
+        check_in_distance: distanceToSchool,
+      });
+      if (insErr) throw insErr;
+
+      document.getElementById('loginPassword').value = '';
+      showAlert(alertAttend, `✅ Check-in thành công lúc ${new Date().toLocaleTimeString('vi-VN')}. Xin chào ${emp.display_name}!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertAttend, 'Lỗi: ' + (err.message || err), 'error');
+    } finally {
+      btnCheckin.textContent = 'Check-in';
+      btnCheckin.disabled = !inRange;
+    }
+  });
+
+  btnCheckout.addEventListener('click', async () => {
+    hideAlert(alertAttend);
+
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!username || !password) {
+      showAlert(alertAttend, 'Vui lòng nhập tên đăng nhập và mật khẩu.', 'error');
+      return;
+    }
+    if (!currentPos || !inRange) {
+      showAlert(alertAttend, 'Bạn phải ở trong phạm vi trường và đã lấy vị trí.', 'error');
+      return;
+    }
+
+    btnCheckout.disabled = true;
+    btnCheckout.textContent = 'Đang xác thực...';
+
+    try {
+      const emp = await verifyEmployee(username, password);
+      if (!emp) {
+        showAlert(alertAttend, 'Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khoá.', 'error');
+        return;
+      }
+
       btnCheckout.textContent = 'Đang lưu...';
+      const today = todayISO();
 
-      try {
-        const today = todayISO();
-
-        const { data: rows, error: qErr } = await supabaseClient
-          .from('attendance')
-          .select('id, check_out_time')
-          .eq('employee_id', id)
-          .eq('work_date', today)
-          .order('check_in_time', { ascending: false })
-          .limit(1);
-
-        if (qErr) throw qErr;
-        if (!rows || rows.length === 0) {
-          showAlert(alertAttend, 'Không tìm thấy lượt check-in hôm nay của mã NV này.', 'error');
-          return;
-        }
-        if (rows[0].check_out_time) {
-          showAlert(alertAttend, 'Nhân viên này đã check-out hôm nay rồi.', 'warning');
-          return;
-        }
-
-        const { error: upErr } = await supabaseClient
-          .from('attendance')
-          .update({
-            check_out_time: new Date().toISOString(),
-            check_out_lat: currentPos.lat,
-            check_out_lng: currentPos.lng,
-            check_out_distance: distanceToSchool,
-          })
-          .eq('id', rows[0].id);
-
-        if (upErr) throw upErr;
-
-        showAlert(alertAttend, '✅ Check-out thành công lúc ' +
-          new Date().toLocaleTimeString('vi-VN') + '.', 'success');
-      } catch (err) {
-        console.error(err);
-        showAlert(alertAttend, 'Lỗi check-out: ' + (err.message || err), 'error');
-      } finally {
-        btnCheckout.textContent = 'Check-out';
-        btnCheckout.disabled = !inRange || !configOK;
+      const { data: rows, error: qErr } = await supabaseClient
+        .from('attendance').select('id, check_out_time')
+        .eq('employee_id', emp.username).eq('work_date', today)
+        .order('check_in_time', { ascending: false }).limit(1);
+      if (qErr) throw qErr;
+      if (!rows || rows.length === 0) {
+        showAlert(alertAttend, `${emp.display_name} chưa check-in hôm nay.`, 'error');
+        return;
       }
-    });
+      if (rows[0].check_out_time) {
+        showAlert(alertAttend, `${emp.display_name} đã check-out hôm nay rồi.`, 'warning');
+        return;
+      }
 
-    /* =========================================================
-       ADMIN LOGIN
-       ========================================================= */
-    const modal         = document.getElementById('adminLoginModal');
-    const btnOpenLogin  = document.getElementById('btnOpenAdminLogin');
-    const btnCloseLogin = document.getElementById('btnCloseAdminLogin');
-    const loginForm     = document.getElementById('adminLoginForm');
-    const alertLogin    = document.getElementById('alertLogin');
-    const headerAdmin   = document.getElementById('headerAdmin');
-    const headerInfo    = document.getElementById('headerAdminInfo');
-    const adminEmailLbl = document.getElementById('adminEmailLabel');
-    const tabAdminView  = document.getElementById('tabAdminView');
+      const { error: upErr } = await supabaseClient.from('attendance').update({
+        check_out_time: new Date().toISOString(),
+        check_out_lat:  currentPos.lat,
+        check_out_lng:  currentPos.lng,
+        check_out_distance: distanceToSchool,
+      }).eq('id', rows[0].id);
+      if (upErr) throw upErr;
 
-    btnOpenLogin.addEventListener('click', () => modal.classList.add('show'));
-    btnCloseLogin.addEventListener('click', () => modal.classList.remove('show'));
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.remove('show');
-    });
+      document.getElementById('loginPassword').value = '';
+      showAlert(alertAttend, `✅ Check-out thành công lúc ${new Date().toLocaleTimeString('vi-VN')}. Xin chào ${emp.display_name}!`, 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertAttend, 'Lỗi: ' + (err.message || err), 'error');
+    } finally {
+      btnCheckout.textContent = 'Check-out';
+      btnCheckout.disabled = !inRange;
+    }
+  });
 
-    function setAdminUI(isAdmin, email) {
-      if (isAdmin) {
-        headerAdmin.style.display = 'none';
-        headerInfo.style.display = 'block';
-        adminEmailLbl.textContent = email || '';
-        tabAdminView.style.display = 'inline-block';
-      } else {
-        headerAdmin.style.display = 'block';
-        headerInfo.style.display = 'none';
-        tabAdminView.style.display = 'none';
-        if (panels.adminView.classList.contains('active')) switchTab('attendance');
+  /* =========================================================
+     ADMIN AUTH
+     ========================================================= */
+  const modal         = document.getElementById('adminLoginModal');
+  const btnOpenLogin  = document.getElementById('btnOpenAdminLogin');
+  const btnCloseLogin = document.getElementById('btnCloseAdminLogin');
+  const loginForm     = document.getElementById('adminLoginForm');
+  const alertLogin    = document.getElementById('alertLogin');
+  const headerAdmin   = document.getElementById('headerAdmin');
+  const headerInfo    = document.getElementById('headerAdminInfo');
+  const adminEmailLbl = document.getElementById('adminEmailLabel');
+  const tabAdminView  = document.getElementById('tabAdminView');
+  const tabUsers      = document.getElementById('tabUsers');
+
+  btnOpenLogin.addEventListener('click', () => modal.classList.add('show'));
+  btnCloseLogin.addEventListener('click', () => modal.classList.remove('show'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('show'); });
+
+  function setAdminUI(isAdmin, email) {
+    if (isAdmin) {
+      headerAdmin.style.display = 'none';
+      headerInfo.style.display = 'block';
+      adminEmailLbl.textContent = email || '';
+      tabAdminView.style.display = 'inline-block';
+      tabUsers.style.display     = 'inline-block';
+    } else {
+      headerAdmin.style.display = 'block';
+      headerInfo.style.display = 'none';
+      tabAdminView.style.display = 'none';
+      tabUsers.style.display     = 'none';
+      if (panels.adminView.classList.contains('active') || panels.users.classList.contains('active')) {
+        switchTab('attendance');
       }
     }
+  }
 
-    async function checkAdminStatus() {
-      if (!supabaseClient) return;
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) { setAdminUI(false); return; }
+  async function checkAdminStatus() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { setAdminUI(false); return; }
+    const { data } = await supabaseClient
+      .from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
+    if (data && data.role === 'admin') setAdminUI(true, session.user.email);
+    else setAdminUI(false);
+  }
 
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideAlert(alertLogin);
+
+    const email    = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    const btn      = document.getElementById('btnAdminLogin');
+
+    btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      const { data: roleRow } = await supabaseClient
+        .from('user_roles').select('role').eq('user_id', data.user.id).maybeSingle();
+
+      if (!roleRow || roleRow.role !== 'admin') {
+        await supabaseClient.auth.signOut();
+        throw new Error('Tài khoản này không có quyền admin.');
+      }
+
+      setAdminUI(true, data.user.email);
+      modal.classList.remove('show');
+      document.getElementById('adminEmail').value = '';
+      document.getElementById('adminPassword').value = '';
+      switchTab('adminView');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertLogin, err.message || 'Đăng nhập thất bại.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+    setAdminUI(false);
+  });
+
+  /* =========================================================
+     ADMIN — CÀI ĐẶT VỊ TRÍ (Fix 2)
+     ========================================================= */
+  const alertLocSetup = document.getElementById('alertLocSetup');
+  const adminSavedLoc = document.getElementById('adminSavedLoc');
+  const radiusInput   = document.getElementById('radiusInput');
+  const btnSetLoc     = document.getElementById('btnSetLocation');
+
+  async function loadSettingsForAdmin() {
+    try {
       const { data, error } = await supabaseClient
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (error || !data || data.role !== 'admin') {
-        setAdminUI(false);
-        return;
+        .from('settings').select('*').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      if (data && data.university_lat != null && data.university_lng != null) {
+        adminSavedLoc.textContent =
+          `${Number(data.university_lat).toFixed(5)}, ${Number(data.university_lng).toFixed(5)} — Bán kính ${data.radius_meters || 200} m`;
+        radiusInput.value = data.radius_meters || 200;
+        attendanceLocation = {
+          lat: data.university_lat,
+          lng: data.university_lng,
+          radiusMeters: data.radius_meters || 200,
+        };
+      } else {
+        adminSavedLoc.textContent = 'Chưa cài đặt — hãy bấm nút bên dưới';
       }
-      setAdminUI(true, session.user.email);
+    } catch (err) {
+      console.warn(err);
+      adminSavedLoc.textContent = 'Lỗi tải';
+    }
+  }
+
+  btnSetLoc.addEventListener('click', () => {
+    hideAlert(alertLocSetup);
+    if (!navigator.geolocation) {
+      showAlert(alertLocSetup, 'Trình duyệt không hỗ trợ định vị.', 'error');
+      return;
+    }
+    const radius = parseInt(radiusInput.value, 10);
+    if (!radius || radius < 10) {
+      showAlert(alertLocSetup, 'Bán kính phải là số >= 10 mét.', 'error');
+      return;
     }
 
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideAlert(alertLogin);
+    btnSetLoc.disabled = true;
+    btnSetLoc.textContent = 'Đang lấy vị trí...';
 
-      if (!configOK) {
-        showAlert(alertLogin, 'Chưa cấu hình Supabase.', 'error');
-        return;
-      }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
 
-      const email    = document.getElementById('adminEmail').value.trim();
-      const password = document.getElementById('adminPassword').value;
-      const btn      = document.getElementById('btnAdminLogin');
+        try {
+          const { error } = await supabaseClient
+            .from('settings')
+            .update({
+              university_lat: lat,
+              university_lng: lng,
+              radius_meters:  radius,
+              updated_at:     new Date().toISOString(),
+            })
+            .eq('id', 1);
+          if (error) throw error;
 
-      btn.disabled = true;
-      btn.textContent = 'Đang đăng nhập...';
-
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-
-        const { data: roleRow, error: roleErr } = await supabaseClient
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', data.user.id)
-          .maybeSingle();
-
-        if (roleErr || !roleRow || roleRow.role !== 'admin') {
-          await supabaseClient.auth.signOut();
-          throw new Error('Tài khoản này không có quyền admin.');
+          attendanceLocation = { lat, lng, radiusMeters: radius };
+          adminSavedLoc.textContent =
+            `${lat.toFixed(5)}, ${lng.toFixed(5)} — Bán kính ${radius} m`;
+          showAlert(alertLocSetup,
+            `✅ Đã lưu vị trí: ${lat.toFixed(5)}, ${lng.toFixed(5)} (bán kính ${radius} m)`,
+            'success');
+        } catch (err) {
+          console.error(err);
+          showAlert(alertLocSetup, 'Lỗi lưu: ' + (err.message || err), 'error');
+        } finally {
+          btnSetLoc.disabled = false;
+          btnSetLoc.textContent = '📍 Đặt vị trí hiện tại';
         }
+      },
+      (err) => {
+        let msg = 'Không lấy được vị trí.';
+        if (err.code === err.PERMISSION_DENIED) msg = 'Bạn đã từ chối quyền định vị.';
+        else if (err.code === err.TIMEOUT) msg = 'Hết thời gian chờ định vị.';
+        showAlert(alertLocSetup, msg, 'error');
+        btnSetLoc.disabled = false;
+        btnSetLoc.textContent = '📍 Đặt vị trí hiện tại';
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
 
-        setAdminUI(true, data.user.email);
-        modal.classList.remove('show');
-        document.getElementById('adminEmail').value = '';
-        document.getElementById('adminPassword').value = '';
-        switchTab('adminView');
-      } catch (err) {
-        console.error(err);
-        showAlert(alertLogin, err.message || 'Đăng nhập thất bại.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Đăng nhập';
-      }
-    });
+  /* =========================================================
+     ADMIN VIEW — XEM DỮ LIỆU THEO NGÀY
+     ========================================================= */
+  const adminDate   = document.getElementById('adminDate');
+  const btnLoadData = document.getElementById('btnLoadData');
+  const adminTbody  = document.getElementById('adminTableBody');
+  const alertAdmin  = document.getElementById('alertAdmin');
 
-    document.getElementById('btnLogout').addEventListener('click', async () => {
-      if (supabaseClient) await supabaseClient.auth.signOut();
-      setAdminUI(false);
-    });
+  adminDate.value = todayISO();
 
-    /* =========================================================
-       ADMIN VIEW — XEM DỮ LIỆU THEO NGÀY
-       ========================================================= */
-    const adminDate   = document.getElementById('adminDate');
-    const btnLoadData = document.getElementById('btnLoadData');
-    const adminTbody  = document.getElementById('adminTableBody');
-    const alertAdmin  = document.getElementById('alertAdmin');
+  btnLoadData.addEventListener('click', async () => {
+    hideAlert(alertAdmin);
+    const date = adminDate.value;
+    if (!date) { showAlert(alertAdmin, 'Vui lòng chọn ngày.', 'error'); return; }
 
-    adminDate.value = todayISO();
+    btnLoadData.disabled = true;
+    btnLoadData.textContent = 'Đang tải...';
 
-    btnLoadData.addEventListener('click', async () => {
-      hideAlert(alertAdmin);
+    try {
+      const { data, error } = await supabaseClient
+        .from('attendance').select('*').eq('work_date', date)
+        .order('check_in_time', { ascending: true });
+      if (error) throw error;
 
-      const date = adminDate.value;
-      if (!date) {
-        showAlert(alertAdmin, 'Vui lòng chọn ngày.', 'error');
+      if (!data || data.length === 0) {
+        adminTbody.innerHTML = '<tr><td colspan="7" class="empty">Không có dữ liệu chấm công cho ngày này.</td></tr>';
         return;
       }
-      if (!configOK) {
-        showAlert(alertAdmin, 'Chưa cấu hình Supabase.', 'error');
+
+      adminTbody.innerHTML = data.map((row, i) => {
+        const inPos = row.check_in_lat != null
+          ? `<div class="cell-mono">${fmtCoord(row.check_in_lat, row.check_in_lng)}</div>
+             <div class="cell-mono">${row.check_in_distance != null ? Math.round(row.check_in_distance) + ' m' : ''}</div>`
+          : '—';
+        const outPos = row.check_out_lat != null
+          ? `<div class="cell-mono">${fmtCoord(row.check_out_lat, row.check_out_lng)}</div>
+             <div class="cell-mono">${row.check_out_distance != null ? Math.round(row.check_out_distance) + ' m' : ''}</div>`
+          : '—';
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td><strong>${escapeHtml(row.employee_name)}</strong></td>
+            <td><code style="font-size:12px;">${escapeHtml(row.employee_id || '')}</code></td>
+            <td>${fmtTime(row.check_in_time)}</td>
+            <td>${inPos}</td>
+            <td>${fmtTime(row.check_out_time)}</td>
+            <td>${outPos}</td>
+          </tr>`;
+      }).join('');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertAdmin, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
+      adminTbody.innerHTML = '<tr><td colspan="7" class="empty">Lỗi tải dữ liệu.</td></tr>';
+    } finally {
+      btnLoadData.disabled = false;
+      btnLoadData.textContent = 'Xem dữ liệu';
+    }
+  });
+
+  /* =========================================================
+     QUẢN LÝ NHÂN VIÊN (Fix 3)
+     ========================================================= */
+  const alertUsers  = document.getElementById('alertUsers');
+  const usersTbody  = document.getElementById('usersTableBody');
+  const btnAddEmp   = document.getElementById('btnAddEmployee');
+
+  async function loadEmployees() {
+    hideAlert(alertUsers);
+    try {
+      const { data, error } = await supabaseClient
+        .from('employees').select('*').order('display_name', { ascending: true });
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        usersTbody.innerHTML = '<tr><td colspan="6" class="empty">Chưa có nhân viên nào.</td></tr>';
         return;
       }
 
-      btnLoadData.disabled = true;
-      btnLoadData.textContent = 'Đang tải...';
+      usersTbody.innerHTML = data.map((e, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><code style="font-size:12px;">${escapeHtml(e.username)}</code></td>
+          <td><strong>${escapeHtml(e.display_name)}</strong></td>
+          <td>${e.phone ? escapeHtml(e.phone) : '—'}</td>
+          <td>${e.active
+            ? '<span class="status-pill pill-ok">Hoạt động</span>'
+            : '<span class="status-pill pill-fail">Đã khoá</span>'}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn btn-outline" data-action="reset"  data-id="${e.id}">Mật khẩu</button>
+              <button class="btn btn-outline" data-action="toggle" data-id="${e.id}" data-active="${e.active}">${e.active ? 'Khoá' : 'Mở'}</button>
+              <button class="btn btn-danger"  data-action="delete" data-id="${e.id}" data-name="${escapeHtml(e.display_name)}">Xoá</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error(err);
+      showAlert(alertUsers, 'Lỗi tải danh sách: ' + (err.message || err), 'error');
+    }
+  }
 
-      try {
-        const { data, error } = await supabaseClient
-          .from('attendance')
-          .select('*')
-          .eq('work_date', date)
-          .order('check_in_time', { ascending: true });
+  usersTbody.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id, active, name } = btn.dataset;
+    hideAlert(alertUsers);
 
-        if (error) throw error;
+    if (action === 'delete') {
+      if (!confirm(`Xoá nhân viên "${name}"? Dữ liệu chấm công cũ vẫn được giữ.`)) return;
+      const { error } = await supabaseClient.from('employees').delete().eq('id', id);
+      if (error) return showAlert(alertUsers, 'Lỗi xoá: ' + error.message, 'error');
+      showAlert(alertUsers, 'Đã xoá nhân viên.', 'success');
+      loadEmployees();
+    } else if (action === 'toggle') {
+      const newActive = active !== 'true';
+      const { error } = await supabaseClient.from('employees').update({ active: newActive }).eq('id', id);
+      if (error) return showAlert(alertUsers, 'Lỗi: ' + error.message, 'error');
+      loadEmployees();
+    } else if (action === 'reset') {
+      const newPwd = prompt(`Nhập mật khẩu mới cho "${name}":`);
+      if (!newPwd) return;
+      if (newPwd.length < 4) return showAlert(alertUsers, 'Mật khẩu phải >= 4 ký tự.', 'error');
+      const { error } = await supabaseClient.rpc('reset_employee_password', {
+        p_id: id, p_password: newPwd,
+      });
+      if (error) return showAlert(alertUsers, 'Lỗi đổi mật khẩu: ' + error.message, 'error');
+      showAlert(alertUsers, 'Đã đổi mật khẩu.', 'success');
+    }
+  });
 
-        if (!data || data.length === 0) {
-          adminTbody.innerHTML =
-            '<tr><td colspan="7" class="empty">Không có dữ liệu chấm công cho ngày này.</td></tr>';
-          return;
-        }
+  btnAddEmp.addEventListener('click', async () => {
+    hideAlert(alertUsers);
+    const username    = document.getElementById('newUsername').value.trim();
+    const password    = document.getElementById('newPassword').value;
+    const displayName = document.getElementById('newDisplayName').value.trim();
+    const phone       = document.getElementById('newPhone').value.trim();
 
-        adminTbody.innerHTML = data.map((row, i) => {
-          const inPos  = row.check_in_lat != null
-            ? `<div class="cell-mono">${fmtCoord(row.check_in_lat, row.check_in_lng)}</div>
-               <div class="cell-mono">${row.check_in_distance != null ? Math.round(row.check_in_distance) + ' m' : ''}</div>`
-            : '—';
-          const outPos = row.check_out_lat != null
-            ? `<div class="cell-mono">${fmtCoord(row.check_out_lat, row.check_out_lng)}</div>
-               <div class="cell-mono">${row.check_out_distance != null ? Math.round(row.check_out_distance) + ' m' : ''}</div>`
-            : '—';
+    if (!username || !password || !displayName) {
+      showAlert(alertUsers, 'Vui lòng nhập đủ: tên đăng nhập, mật khẩu, tên hiển thị.', 'error');
+      return;
+    }
+    if (password.length < 4) {
+      showAlert(alertUsers, 'Mật khẩu phải từ 4 ký tự.', 'error');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      showAlert(alertUsers, 'Tên đăng nhập chỉ gồm chữ, số, gạch dưới, gạch ngang, dấu chấm.', 'error');
+      return;
+    }
 
-          return `
-            <tr>
-              <td>${i + 1}</td>
-              <td><strong>${escapeHtml(row.employee_name)}</strong></td>
-              <td>${escapeHtml(row.employee_id || '')}</td>
-              <td>${fmtTime(row.check_in_time)}</td>
-              <td>${inPos}</td>
-              <td>${fmtTime(row.check_out_time)}</td>
-              <td>${outPos}</td>
-            </tr>`;
-        }).join('');
-      } catch (err) {
-        console.error(err);
-        showAlert(alertAdmin, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
-        adminTbody.innerHTML =
-          '<tr><td colspan="7" class="empty">Lỗi tải dữ liệu.</td></tr>';
-      } finally {
-        btnLoadData.disabled = false;
-        btnLoadData.textContent = 'Xem dữ liệu';
-      }
+    btnAddEmp.disabled = true;
+    btnAddEmp.textContent = 'Đang thêm...';
+
+    try {
+      const { error } = await supabaseClient.rpc('create_employee', {
+        p_username: username,
+        p_password: password,
+        p_display_name: displayName,
+        p_phone: phone || null,
+      });
+      if (error) throw error;
+
+      showAlert(alertUsers, `Đã thêm nhân viên "${displayName}".`, 'success');
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newDisplayName').value = '';
+      document.getElementById('newPhone').value = '';
+      loadEmployees();
+    } catch (err) {
+      console.error(err);
+      const msg = (err.message || '').includes('duplicate')
+        ? 'Tên đăng nhập đã tồn tại.'
+        : (err.message || 'Lỗi không xác định');
+      showAlert(alertUsers, 'Lỗi: ' + msg, 'error');
+    } finally {
+      btnAddEmp.disabled = false;
+      btnAddEmp.textContent = '+ Thêm nhân viên';
+    }
+  });
+
+  /* =========================================================
+     KHỞI CHẠY
+     ========================================================= */
+  (async () => {
+    await loadSchoolLocation();
+    await checkAdminStatus();
+
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) { setAdminUI(false); return; }
+      const { data } = await supabaseClient
+        .from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle();
+      if (data && data.role === 'admin') setAdminUI(true, session.user.email);
+      else setAdminUI(false);
     });
 
-    /* =========================================================
-       KHỞI CHẠY
-       ========================================================= */
-    (async () => {
-      await checkAdminStatus();
-
-      if (supabaseClient) {
-        supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-          if (!session) { setAdminUI(false); return; }
-          const { data } = await supabaseClient
-            .from('user_roles').select('role')
-            .eq('user_id', session.user.id).maybeSingle();
-          if (data && data.role === 'admin') setAdminUI(true, session.user.email);
-          else setAdminUI(false);
-        });
-      }
-    })();
-  </script>
+    // Nếu chưa có vị trí trường, hiện cảnh báo ở tab chấm công
+    if (!locationIsOK()) {
+      const w = document.getElementById('configWarn');
+      w.style.display = 'block';
+      w.innerHTML = '<strong>Chưa có vị trí chấm công.</strong><br>Admin cần vào tab <b>Xem chấm công</b> → bấm <b>Đặt vị trí hiện tại</b> để cài đặt.';
+    }
+  })();
+</script>
 </body>
 </html>
