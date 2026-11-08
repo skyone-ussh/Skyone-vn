@@ -9,7 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* ============ DESIGN TOKENS ============ */
     :root {
       --primary: #0F3D5C;
       --primary-hover: #0A2D45;
@@ -33,16 +32,11 @@
       --radius-lg: 16px;
       --shadow-sm: 0 1px 2px rgba(15, 61, 92, 0.04);
       --shadow: 0 2px 8px rgba(15, 61, 92, 0.06);
-      --shadow-lg: 0 8px 24px rgba(15, 61, 92, 0.1);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html {
-      overflow-x: hidden;
-      width: 100%;
-      max-width: 100vw;
-    }
+    html { overflow-x: hidden; width: 100%; max-width: 100vw; }
     body {
       font-family: 'Be Vietnam Pro', -apple-system, sans-serif;
       background: var(--bg);
@@ -56,18 +50,12 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 20px;
-      width: 100%;
-    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; width: 100%; }
 
-    /* ============ SCREENS ============ */
     .screen { display: none; min-height: 100vh; }
     .screen.active { display: block; }
 
-    /* ============ LOGIN SCREEN ============ */
+    /* LOGIN */
     #screen-login {
       display: none;
       min-height: 100vh;
@@ -77,194 +65,106 @@
     }
     #screen-login.active { display: flex; }
     #screen-login::before {
-      content: '';
-      position: absolute;
-      top: -200px; right: -200px;
-      width: 500px; height: 500px;
-      border-radius: 50%;
+      content: ''; position: absolute; top: -200px; right: -200px;
+      width: 500px; height: 500px; border-radius: 50%;
       background: radial-gradient(circle, rgba(244,180,0,0.12) 0%, transparent 70%);
     }
     #screen-login::after {
-      content: '';
-      position: absolute;
-      bottom: -200px; left: -200px;
-      width: 500px; height: 500px;
-      border-radius: 50%;
+      content: ''; position: absolute; bottom: -200px; left: -200px;
+      width: 500px; height: 500px; border-radius: 50%;
       background: radial-gradient(circle, rgba(30,90,127,0.4) 0%, transparent 70%);
     }
 
     .login-wrapper {
-      width: 100%;
-      max-width: 420px;
-      margin: auto;
-      padding: 32px 20px;
-      position: relative;
-      z-index: 1;
+      width: 100%; max-width: 420px; margin: auto;
+      padding: 32px 20px; position: relative; z-index: 1;
     }
 
-    .login-brand {
-      text-align: center;
-      margin-bottom: 32px;
-      color: #fff;
-    }
+    .login-brand { text-align: center; margin-bottom: 32px; color: #fff; }
     .brand-mark {
-      width: 64px; height: 64px;
-      margin: 0 auto 16px;
-      background: #fff;
-      color: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 20px;
-      letter-spacing: 0.5px;
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: #fff; color: var(--primary); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 20px; letter-spacing: 0.5px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
     .login-brand h1 {
-      font-size: 17px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-      line-height: 1.35;
+      font-size: 17px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px; line-height: 1.35;
     }
-    .login-brand p {
-      font-size: 13px;
-      opacity: 0.75;
-    }
+    .login-brand p { font-size: 13px; opacity: 0.75; }
 
     .login-card {
-      background: #fff;
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      background: #fff; border-radius: var(--radius-lg);
+      padding: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
     }
-    .login-card h2 {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 4px;
-    }
-    .login-card .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
+    .login-card h2 { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .login-card .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
 
     .login-footer {
-      text-align: center;
-      color: rgba(255,255,255,0.6);
-      font-size: 12px;
-      margin-top: 24px;
+      text-align: center; color: rgba(255,255,255,0.6);
+      font-size: 12px; margin-top: 24px;
     }
 
-    /* ============ FORM ELEMENTS ============ */
+    /* FORM */
     .field { margin-bottom: 16px; }
     .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 6px;
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--text); margin-bottom: 6px;
     }
     .field input, .field select {
-      width: 100%;
-      padding: 11px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-family: inherit;
-      background: #FAFBFC;
-      color: var(--text);
-      transition: all 0.15s;
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; font-family: inherit;
+      background: #FAFBFC; color: var(--text); transition: all 0.15s;
     }
     .field input:focus, .field select:focus {
-      outline: none;
-      border-color: var(--primary-light);
-      background: #fff;
-      box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
+      outline: none; border-color: var(--primary-light);
+      background: #fff; box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
     }
     .field input::placeholder { color: #94A3B8; }
 
     .checkbox {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
-      cursor: pointer;
-      margin: 4px 0 20px;
-      user-select: none;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-muted);
+      cursor: pointer; margin: 4px 0 20px; user-select: none;
     }
-    .checkbox input {
-      width: 16px; height: 16px;
-      accent-color: var(--primary);
-      cursor: pointer;
-    }
+    .checkbox input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+    .checkbox small { display: block; font-size: 11px; opacity: 0.7; margin-top: 2px; }
 
-    /* ============ BUTTONS ============ */
+    /* BUTTONS */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 11px 20px;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; padding: 11px 20px; border: none;
+      border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
       white-space: nowrap;
     }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
+    .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:not(:disabled):hover {
-      background: var(--primary-hover);
-      box-shadow: 0 4px 12px rgba(15,61,92,0.25);
+      background: var(--primary-hover); box-shadow: 0 4px 12px rgba(15,61,92,0.25);
     }
     .btn-outline {
-      background: #fff;
-      color: var(--primary);
-      border: 1.5px solid var(--border-strong);
+      background: #fff; color: var(--primary); border: 1.5px solid var(--border-strong);
     }
-    .btn-outline:not(:disabled):hover {
-      border-color: var(--primary);
-      background: #F0F6FC;
-    }
+    .btn-outline:not(:disabled):hover { border-color: var(--primary); background: #F0F6FC; }
     .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-      padding: 8px 12px;
-      font-size: 13px;
+      background: transparent; color: var(--text-muted);
+      padding: 8px 12px; font-size: 13px;
     }
-    .btn-ghost:hover {
-      color: var(--primary);
-      background: rgba(15,61,92,0.05);
-    }
+    .btn-ghost:hover { color: var(--primary); background: rgba(15,61,92,0.05); }
     .btn-danger {
-      background: #fff;
-      color: var(--error);
-      border: 1.5px solid #FCA5A5;
+      background: #fff; color: var(--error); border: 1.5px solid #FCA5A5;
     }
     .btn-danger:not(:disabled):hover { background: var(--error-bg); }
     .btn-block { width: 100%; }
     .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-    /* ============ ALERTS ============ */
+    /* ALERTS */
     .alert {
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      line-height: 1.5;
-      margin-bottom: 16px;
-      display: none;
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; line-height: 1.5; margin-bottom: 16px; display: none;
     }
     .alert.show { display: block; }
     .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #FECACA; }
@@ -272,168 +172,85 @@
     .alert-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid #FDE68A; }
     .alert-info { background: var(--info-bg); color: var(--primary-light); border: 1px solid #BFDBFE; }
 
-    /* ============ APP HEADER ============ */
+    /* APP HEADER */
     .app-header {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      background: #fff; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
     }
     .app-header .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding-top: 12px;
-      padding-bottom: 12px;
-      flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap;
     }
-    .app-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
+    .app-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-mark-sm {
-      width: 40px; height: 40px;
-      background: var(--primary);
-      color: #fff;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 13px;
-      flex-shrink: 0;
-      letter-spacing: 0.3px;
+      width: 40px; height: 40px; background: var(--primary); color: #fff;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; flex-shrink: 0; letter-spacing: 0.3px;
     }
     .app-brand div { min-width: 0; }
     .app-brand strong {
-      display: block;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary);
-      line-height: 1.3;
+      display: block; font-size: 14px; font-weight: 700;
+      color: var(--primary); line-height: 1.3;
     }
     .app-brand small {
-      display: block;
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-weight: 500;
-      margin-top: 2px;
+      display: block; font-size: 11px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 500; margin-top: 2px;
     }
     .app-user {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13px;
-      color: var(--text-muted);
-      min-width: 0;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--text-muted); min-width: 0;
     }
     .app-user span {
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
-    /* ============ APP TABS ============ */
+    /* TABS */
     .app-tabs {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 64px;
-      z-index: 90;
+      background: #fff; border-bottom: 1px solid var(--border);
+      position: sticky; top: 64px; z-index: 90;
     }
     .app-tabs .container {
-      display: flex;
-      gap: 4px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      display: flex; gap: 4px; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
     .app-tabs .container::-webkit-scrollbar { display: none; }
     .tab {
-      padding: 14px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-family: inherit;
-      white-space: nowrap;
-      border-bottom: 2.5px solid transparent;
-      transition: all 0.15s;
-      margin-bottom: -1px;
+      padding: 14px 18px; font-size: 13px; font-weight: 600;
+      color: var(--text-muted); border: none; background: transparent;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      border-bottom: 2.5px solid transparent; transition: all 0.15s; margin-bottom: -1px;
     }
     .tab:hover { color: var(--primary); }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    /* ============ MAIN CONTENT ============ */
+    /* MAIN */
     .app-main { padding: 24px 0 60px; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      box-shadow: var(--shadow-sm);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-sm);
       max-width: 100%;
     }
     .card + .card { margin-top: 16px; }
-    .card h2 {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 4px;
-    }
-    .card h3 {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 12px;
-    }
-    .card > .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
+    .card h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .card h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+    .card > .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
-    /* ============ EMPLOYEE HERO ============ */
+    /* EMPLOYEE HERO */
     .employee-hero {
-      text-align: center;
-      padding: 32px 24px 24px;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 16px;
+      text-align: center; padding: 32px 24px 24px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-sm); margin-bottom: 16px;
     }
-    .employee-greeting {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    .employee-greeting strong {
-      color: var(--primary);
-      font-weight: 700;
-    }
+    .employee-greeting { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+    .employee-greeting strong { color: var(--primary); font-weight: 700; }
     .status-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      margin: 20px auto;
-      transition: all 0.3s;
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; margin: 20px auto; transition: all 0.3s;
     }
     .status-icon.waiting { background: #F1F5F9; }
     .status-icon.loading { background: #FEF3C7; animation: pulse 1.5s infinite; }
@@ -441,174 +258,99 @@
     .status-icon.error { background: var(--error-bg); }
     .status-icon.warning { background: var(--warning-bg); }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
-    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
     .status-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
-      line-height: 1.35;
+      font-size: 18px; font-weight: 700; color: var(--text);
+      margin-bottom: 6px; line-height: 1.35;
     }
     .status-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      max-width: 400px;
-      margin: 0 auto;
-      line-height: 1.55;
+      font-size: 13px; color: var(--text-muted);
+      max-width: 400px; margin: 0 auto; line-height: 1.55;
+    }
+    .last-update {
+      display: block; font-size: 11px; color: var(--text-muted);
+      margin-top: 12px; opacity: 0.7;
     }
 
-    /* ============ INFO GRID ============ */
+    /* INFO GRID */
     .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 16px;
-      padding: 16px 0;
-      border-top: 1px solid var(--border);
-      margin-top: 16px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); margin-top: 16px;
     }
     .info-item { min-width: 0; }
     .info-label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 4px;
     }
     .info-value {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      word-break: break-word;
+      display: block; font-size: 14px; font-weight: 600;
+      color: var(--text); word-break: break-word;
     }
     .info-value.mono {
       font-family: 'SF Mono', 'Courier New', monospace;
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
+      font-size: 12px; color: var(--text-muted); font-weight: 500;
     }
+    .info-value.highlight { color: var(--success); }
 
     .actions-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
-      margin-top: 8px;
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+      padding-top: 16px; border-top: 1px solid var(--border); margin-top: 8px;
     }
 
-    /* ============ TABLE ============ */
+    /* TABLE */
     .table-wrap {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      margin-top: 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border);
-      max-width: 100%;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      margin-top: 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); max-width: 100%;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      min-width: 640px;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
     th {
-      background: #F8FAFC;
-      color: var(--text-muted);
-      text-align: left;
-      padding: 11px 14px;
-      font-weight: 700;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
+      background: #F8FAFC; color: var(--text-muted); text-align: left;
+      padding: 11px 14px; font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
     }
-    td {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #FAFBFC; }
-    .empty {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-    .cell-mono {
-      font-family: 'SF Mono', 'Courier New', monospace;
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    .row-actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
+    .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 13px; }
+    .cell-mono { font-family: 'SF Mono', 'Courier New', monospace; font-size: 11px; color: var(--text-muted); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
-    /* ============ PILLS ============ */
+    /* PILLS */
     .pill {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
     }
     .pill-ok { background: var(--success-bg); color: var(--success); }
     .pill-fail { background: var(--error-bg); color: var(--error); }
     .pill-wait { background: var(--warning-bg); color: var(--warning); }
 
-    /* ============ FORM GRID ============ */
+    /* FORM GRID */
     .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px; margin-bottom: 16px;
     }
     .form-grid .field { margin: 0; }
 
-    .section-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 24px 0;
-    }
-
-    /* ============ LOCATION BOX ============ */
+    /* LOCATION BOX */
     .location-box {
-      background: #F8FAFC;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px;
-      font-size: 13px;
-      line-height: 1.6;
+      background: #F8FAFC; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px;
+      font-size: 13px; line-height: 1.6;
     }
     .location-box .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      padding: 3px 0;
+      display: flex; justify-content: space-between; gap: 12px;
+      flex-wrap: wrap; padding: 3px 0;
     }
     .location-box .label { color: var(--text-muted); }
     .location-box .value {
-      font-weight: 600;
-      font-family: 'SF Mono', 'Courier New', monospace;
-      font-size: 12px;
-      color: var(--text);
-      word-break: break-all;
+      font-weight: 600; font-family: 'SF Mono', 'Courier New', monospace;
+      font-size: 12px; color: var(--text); word-break: break-all;
     }
 
-    /* ============ RESPONSIVE ============ */
     @media (max-width: 640px) {
       .container { padding: 0 14px; }
       .login-card { padding: 24px; }
@@ -627,9 +369,7 @@
 </head>
 <body>
 
-<!-- ======================================================
-     SCREEN 1: LOGIN
-     ====================================================== -->
+<!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="login-wrapper">
     <div class="login-brand">
@@ -656,9 +396,12 @@
                  autocomplete="current-password" required />
         </div>
 
-        <label class="checkbox">
+        <label class="checkbox" title="Chỉ nên tick khi dùng máy cá nhân">
           <input type="checkbox" id="rememberMe" />
-          <span>Lưu mật khẩu cho lần sau</span>
+          <span>
+            Duy trì đăng nhập 7 ngày
+            <small>Chỉ dùng trên máy cá nhân</small>
+          </span>
         </label>
 
         <button type="submit" class="btn btn-primary btn-block" id="btnLogin">Đăng nhập</button>
@@ -669,9 +412,7 @@
   </div>
 </div>
 
-<!-- ======================================================
-     SCREEN 2: EMPLOYEE DASHBOARD
-     ====================================================== -->
+<!-- EMPLOYEE -->
 <div id="screen-employee" class="screen">
   <header class="app-header">
     <div class="container">
@@ -697,6 +438,7 @@
         <div class="status-icon waiting" id="statusIcon">⏳</div>
         <h1 class="status-title" id="statusTitle">Đang kiểm tra vị trí...</h1>
         <p class="status-desc" id="statusDesc">Vui lòng chờ trong giây lát</p>
+        <small class="last-update" id="lastUpdate"></small>
       </div>
 
       <div class="card">
@@ -715,11 +457,15 @@
           </div>
           <div class="info-item">
             <span class="info-label">Giờ vào</span>
-            <span class="info-value" id="infoCheckin">—</span>
+            <span class="info-value highlight" id="infoCheckin">—</span>
           </div>
           <div class="info-item">
             <span class="info-label">Giờ ra</span>
-            <span class="info-value" id="infoCheckout">—</span>
+            <span class="info-value highlight" id="infoCheckout">—</span>
+          </div>
+          <div class="info-item" id="infoDurationItem" style="display:none;">
+            <span class="info-label">Thời lượng ca</span>
+            <span class="info-value highlight" id="infoDuration">—</span>
           </div>
           <div class="info-item">
             <span class="info-label">Khoảng cách</span>
@@ -736,9 +482,7 @@
   </main>
 </div>
 
-<!-- ======================================================
-     SCREEN 3: ADMIN DASHBOARD
-     ====================================================== -->
+<!-- ADMIN -->
 <div id="screen-admin" class="screen">
   <header class="app-header">
     <div class="container">
@@ -767,7 +511,6 @@
   <main class="app-main">
     <div class="container">
 
-      <!-- TAB CHẤM CÔNG -->
       <section class="tab-panel active" id="panel-attendance">
         <div class="card">
           <h2>Bảng chấm công theo ngày</h2>
@@ -804,7 +547,6 @@
         </div>
       </section>
 
-      <!-- TAB NHÂN VIÊN -->
       <section class="tab-panel" id="panel-users">
         <div class="card">
           <h2>Thêm nhân viên mới</h2>
@@ -815,8 +557,7 @@
           <div class="form-grid">
             <div class="field">
               <label for="newUsername">Tên đăng nhập *</label>
-              <input type="text" id="newUsername" placeholder="vd: nva"
-                     autocapitalize="none" spellcheck="false" />
+              <input type="text" id="newUsername" placeholder="vd: nva" autocapitalize="none" spellcheck="false" />
             </div>
             <div class="field">
               <label for="newPassword">Mật khẩu *</label>
@@ -858,7 +599,6 @@
         </div>
       </section>
 
-      <!-- TAB CÀI ĐẶT -->
       <section class="tab-panel" id="panel-settings">
         <div class="card">
           <h2>Cài đặt vị trí chấm công</h2>
@@ -897,22 +637,32 @@
 
 <script>
   /* =========================================================
-     CẤU HÌNH SUPABASE
+     CẤU HÌNH
      ========================================================= */
   const SUPABASE_URL      = 'https://wosgbrafpbigmbhhodov.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvc2dicmFmcGJpZ21iaGhvZG92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxMzgxNTksImV4cCI6MjEwOTcxNDE1OX0.KZ17Pgpaz7POXZ5K606Gb4obPOiw7TGMOLrYUvQg1NE';
 
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storage: window.localStorage,
+      storageKey: 'ussh_admin_auth',
+    },
+  });
 
   const ADMIN_EMAIL_DOMAIN = 'skyone.vn';
-  const REMEMBER_KEY = 'ussh_remember';
-  const EMP_SESSION_KEY = 'ussh_employee_session';
+  const REMEMBER_KEY       = 'ussh_remember_login';
+  const EMP_SESSION_KEY    = 'ussh_emp_session';
+  const EMP_SESSION_TTL    = 7 * 24 * 60 * 60 * 1000; // 7 ngày
 
-  let attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
-  let currentEmployee = null;
-  let currentAdminEmail = null;
-  let employeeGeoState = { busy: false, pos: null, distance: null };
-  let autoRefreshTimer = null;
+  let attendanceLocation       = { lat: null, lng: null, radiusMeters: 200 };
+  let currentEmployee          = null;
+  let currentEmployeePassword  = null; // giữ trong RAM cho RPC
+  let currentAdminEmail        = null;
+  let employeeGeoState         = { busy: false, pos: null, distance: null };
+  let autoRefreshTimer         = null;
 
   /* =========================================================
      HELPERS
@@ -937,8 +687,10 @@
   }
 
   function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    // Dùng timezone VN để nhất quán với server
+    const now = new Date();
+    const vn = new Date(now.getTime() + (now.getTimezoneOffset() + 420) * 60000);
+    return `${vn.getFullYear()}-${String(vn.getMonth()+1).padStart(2,'0')}-${String(vn.getDate()).padStart(2,'0')}`;
   }
   function todayVN() {
     return new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -955,6 +707,18 @@
     return String(s ?? '').replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[m]));
+  }
+  function formatDuration(ms) {
+    if (!ms || ms < 0) return '—';
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h === 0) return `${m} phút`;
+    if (m === 0) return `${h} giờ`;
+    return `${h} giờ ${m} phút`;
+  }
+  function nowVNTime() {
+    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
   function getPosition() {
@@ -980,11 +744,61 @@
   }
 
   /* =========================================================
-     REMEMBER ME
+     STORAGE — Employee session + Remember me
      ========================================================= */
+  function saveEmployeeSession(emp, password) {
+    const data = {
+      id: emp.id,
+      username: emp.username,
+      display_name: emp.display_name,
+      phone: emp.phone,
+      login_at: Date.now(),
+      expires_at: Date.now() + EMP_SESSION_TTL,
+    };
+    if (password) {
+      data.password = password;
+      localStorage.setItem(EMP_SESSION_KEY, JSON.stringify(data));
+      sessionStorage.removeItem(EMP_SESSION_KEY);
+    } else {
+      sessionStorage.setItem(EMP_SESSION_KEY, JSON.stringify(data));
+      localStorage.removeItem(EMP_SESSION_KEY);
+    }
+  }
+  function loadEmployeeSession() {
+    try {
+      let s = localStorage.getItem(EMP_SESSION_KEY);
+      if (s) {
+        const data = JSON.parse(s);
+        if (data.expires_at && data.expires_at < Date.now()) {
+          localStorage.removeItem(EMP_SESSION_KEY);
+          return null;
+        }
+        if (!data.password) return null;
+        return data;
+      }
+      s = sessionStorage.getItem(EMP_SESSION_KEY);
+      if (s) {
+        const data = JSON.parse(s);
+        if (data.expires_at && data.expires_at < Date.now()) {
+          sessionStorage.removeItem(EMP_SESSION_KEY);
+          return null;
+        }
+        return data;
+      }
+      return null;
+    } catch { return null; }
+  }
+  function clearEmployeeSession() {
+    localStorage.removeItem(EMP_SESSION_KEY);
+    sessionStorage.removeItem(EMP_SESSION_KEY);
+    currentEmployeePassword = null;
+  }
+
   function saveRememberedLogin(username, password) {
     try {
-      localStorage.setItem(REMEMBER_KEY, btoa(unescape(encodeURIComponent(JSON.stringify({ u: username, p: password })))));
+      localStorage.setItem(REMEMBER_KEY, btoa(unescape(encodeURIComponent(
+        JSON.stringify({ u: username, p: password })
+      ))));
     } catch {}
   }
   function loadRememberedLogin() {
@@ -994,25 +808,7 @@
       return JSON.parse(decodeURIComponent(escape(atob(s))));
     } catch { return null; }
   }
-  function clearRememberedLogin() {
-    localStorage.removeItem(REMEMBER_KEY);
-  }
-
-  /* =========================================================
-     EMPLOYEE SESSION
-     ========================================================= */
-  function saveEmployeeSession(emp) {
-    sessionStorage.setItem(EMP_SESSION_KEY, JSON.stringify(emp));
-  }
-  function loadEmployeeSession() {
-    try {
-      const s = sessionStorage.getItem(EMP_SESSION_KEY);
-      return s ? JSON.parse(s) : null;
-    } catch { return null; }
-  }
-  function clearEmployeeSession() {
-    sessionStorage.removeItem(EMP_SESSION_KEY);
-  }
+  function clearRememberedLogin() { localStorage.removeItem(REMEMBER_KEY); }
 
   /* =========================================================
      SCREEN SWITCHER
@@ -1024,11 +820,11 @@
   }
 
   /* =========================================================
-     LOGIN FORM
+     LOGIN
      ========================================================= */
-  const loginForm = $('loginForm');
+  const loginForm  = $('loginForm');
   const loginAlert = $('loginAlert');
-  const btnLogin = $('btnLogin');
+  const btnLogin   = $('btnLogin');
 
   const remembered = loadRememberedLogin();
   if (remembered) {
@@ -1042,8 +838,8 @@
     hideAlert(loginAlert);
 
     const rawUsername = $('loginUsername').value.trim();
-    const password = $('loginPassword').value;
-    const remember = $('rememberMe').checked;
+    const password    = $('loginPassword').value;
+    const remember    = $('rememberMe').checked;
 
     if (!rawUsername || !password) {
       showAlert(loginAlert, 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.', 'error');
@@ -1054,7 +850,7 @@
     btnLogin.textContent = 'Đang đăng nhập...';
 
     try {
-      // ----- 1) Thử nhân viên trước -----
+      // 1) Thử nhân viên trước
       const { data: empRows, error: empErr } = await supabaseClient.rpc('verify_employee', {
         p_username: rawUsername,
         p_password: password,
@@ -1063,32 +859,24 @@
 
       if (empRows && empRows.length > 0) {
         const emp = empRows[0];
+        currentEmployeePassword = password;
 
-        if (remember) saveRememberedLogin(rawUsername, password);
-        else clearRememberedLogin();
-
-        saveEmployeeSession({
-          id: emp.id,
-          username: emp.username,
-          display_name: emp.display_name,
-          phone: emp.phone,
-          login_at: Date.now(),
-        });
+        if (remember) {
+          saveRememberedLogin(rawUsername, password);
+          saveEmployeeSession(emp, password);
+        } else {
+          clearRememberedLogin();
+          saveEmployeeSession(emp, null);
+        }
 
         $('loginPassword').value = '';
-        if (!remember) {
-          loginForm.reset();
-        } else {
-          $('loginUsername').value = rawUsername;
-          $('loginPassword').value = password;
-          $('rememberMe').checked = true;
-        }
+        if (!remember) loginForm.reset();
 
         await openEmployeeDashboard(emp);
         return;
       }
 
-      // ----- 2) Thử admin -----
+      // 2) Thử admin
       const email = rawUsername.includes('@')
         ? rawUsername
         : `${rawUsername}@${ADMIN_EMAIL_DOMAIN}`;
@@ -1107,13 +895,7 @@
           else clearRememberedLogin();
 
           $('loginPassword').value = '';
-          if (!remember) {
-            loginForm.reset();
-          } else {
-            $('loginUsername').value = rawUsername;
-            $('loginPassword').value = password;
-            $('rememberMe').checked = true;
-          }
+          if (!remember) loginForm.reset();
 
           await openAdminDashboard(authData.user.email);
           return;
@@ -1138,17 +920,19 @@
     currentEmployee = emp;
     showScreen('employee');
 
-    $('empHeaderName').textContent = emp.display_name || emp.username;
-    $('empGreetingName').textContent = emp.display_name || emp.username;
-    $('infoName').textContent = emp.display_name || emp.username;
-    $('infoUsername').textContent = emp.username;
-    $('infoDate').textContent = todayVN();
-    $('infoCheckin').textContent = '—';
-    $('infoCheckout').textContent = '—';
-    $('infoDistance').textContent = '—';
+    $('empHeaderName').textContent    = emp.display_name || emp.username;
+    $('empGreetingName').textContent  = emp.display_name || emp.username;
+    $('infoName').textContent         = emp.display_name || emp.username;
+    $('infoUsername').textContent     = emp.username;
+    $('infoDate').textContent         = todayVN();
+    $('infoCheckin').textContent      = '—';
+    $('infoCheckout').textContent     = '—';
+    $('infoDistance').textContent     = '—';
+    $('infoDurationItem').style.display = 'none';
     $('btnEmpCheckout').style.display = 'none';
-    $('btnEmpCheckout').disabled = false;
-    $('btnEmpCheckout').textContent = 'Check-out';
+    $('btnEmpCheckout').disabled      = false;
+    $('btnEmpCheckout').textContent   = 'Check-out';
+    $('lastUpdate').textContent       = '';
 
     setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Vui lòng chờ trong giây lát');
     await loadSchoolLocation();
@@ -1185,55 +969,61 @@
 
   async function runAutoCheckin() {
     if (employeeGeoState.busy) return;
-    if (!currentEmployee) return;
+    if (!currentEmployee || !currentEmployeePassword) return;
     employeeGeoState.busy = true;
 
     try {
-      // Bước 1: lấy vị trí
       setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Xác định vị trí GPS của bạn');
       const pos = await getPosition();
       employeeGeoState.pos = pos;
 
-      if (attendanceLocation.lat == null) {
-        await loadSchoolLocation();
-      }
+      if (attendanceLocation.lat == null) await loadSchoolLocation();
       if (attendanceLocation.lat == null) {
         setEmployeeStatus('error', '⚠️', 'Chưa cấu hình vị trí chấm công',
           'Admin chưa đặt vị trí trường. Vui lòng liên hệ quản lý.');
         return;
       }
 
-      // Bước 2: tính khoảng cách
       const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
       employeeGeoState.distance = dist;
       $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
+      $('lastUpdate').textContent = 'Cập nhật lúc ' + nowVNTime();
 
       const inRange = dist <= attendanceLocation.radiusMeters;
 
-      // Bước 3: kiểm tra đã check-in hôm nay chưa
-      const today = todayISO();
-      const { data: existing, error: qErr } = await supabaseClient
-        .from('attendance').select('*')
-        .eq('employee_id', currentEmployee.username)
-        .eq('work_date', today)
-        .order('check_in_time', { ascending: false })
-        .limit(1);
+      // DÙNG RPC — không SELECT trực tiếp
+      const { data: todayRows, error: qErr } = await supabaseClient.rpc('get_today_attendance', {
+        p_username: currentEmployee.username,
+        p_password: currentEmployeePassword,
+      });
       if (qErr) throw qErr;
 
-      const record = existing && existing[0];
+      // RPC trả về mảng rỗng nếu password sai hoặc chưa có bản ghi
+      const record = todayRows && todayRows[0];
+
+      // Nếu password bị đổi → clear session
+      if (!todayRows) {
+        clearEmployeeSession();
+        showScreen('login');
+        showAlert(loginAlert, 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+        return;
+      }
 
       if (record) {
-        $('infoCheckin').textContent = fmtTime(record.check_in_time);
+        $('infoCheckin').textContent  = fmtTime(record.check_in_time);
         $('infoCheckout').textContent = record.check_out_time ? fmtTime(record.check_out_time) : '—';
 
         if (record.check_out_time) {
-          setEmployeeStatus('success', '✅', 'Đã hoàn thành ca làm việc',
-            `Vào lúc ${fmtTime(record.check_in_time)} · Ra lúc ${fmtTime(record.check_out_time)}`);
+          const duration = new Date(record.check_out_time) - new Date(record.check_in_time);
+          $('infoDurationItem').style.display = 'block';
+          $('infoDuration').textContent = formatDuration(duration);
           $('btnEmpCheckout').style.display = 'none';
+
+          setEmployeeStatus('success', '✅', 'Đã hoàn thành ca làm việc',
+            `Vào ${fmtTime(record.check_in_time)} · Ra ${fmtTime(record.check_out_time)} · Tổng ${formatDuration(duration)}`);
           return;
         }
 
-        // Đã check-in, chưa check-out → LUÔN cho bấm check-out
         $('btnEmpCheckout').style.display = 'inline-flex';
         $('btnEmpCheckout').disabled = false;
 
@@ -1244,12 +1034,12 @@
         } else {
           setEmployeeStatus('warning', '📍',
             `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
-            `Bạn đang ở ngoài phạm vi (cách ${Math.round(dist)}m, bán kính cho phép ${attendanceLocation.radiusMeters}m). Di chuyển vào trong phạm vi rồi bấm Check-out.`);
+            `Bạn đang ở ngoài phạm vi (cách ${Math.round(dist)}m, bán kính ${attendanceLocation.radiusMeters}m). Di chuyển vào trong phạm vi rồi bấm Check-out.`);
         }
         return;
       }
 
-      // Bước 4: chưa check-in → nếu trong phạm vi, tự check-in
+      // Chưa check-in
       if (!inRange) {
         setEmployeeStatus('warning', '📍', 'Bạn đang ở ngoài phạm vi chấm công',
           `Khoảng cách hiện tại: ${Math.round(dist)}m · Bán kính cho phép: ${attendanceLocation.radiusMeters}m. Di chuyển vào phạm vi để tự động chấm công.`);
@@ -1257,28 +1047,35 @@
         return;
       }
 
-      // Trong phạm vi + chưa check-in → AUTO CHECK-IN
+      // TỰ ĐỘNG CHECK-IN qua RPC
       setEmployeeStatus('loading', '⏳', 'Đang chấm công...', 'Xác nhận vị trí và ghi nhận giờ vào');
 
-      const { error: insErr } = await supabaseClient.from('attendance').insert({
-        employee_name: currentEmployee.display_name,
-        employee_id: currentEmployee.username,
-        work_date: today,
-        check_in_time: new Date().toISOString(),
-        check_in_lat: pos.lat,
-        check_in_lng: pos.lng,
-        check_in_distance: dist,
+      const { data: insResult, error: insErr } = await supabaseClient.rpc('employee_checkin', {
+        p_username: currentEmployee.username,
+        p_password: currentEmployeePassword,
+        p_lat: pos.lat,
+        p_lng: pos.lng,
+        p_distance: dist,
       });
       if (insErr) throw insErr;
 
-      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      $('infoCheckin').textContent = nowStr;
-      $('infoCheckout').textContent = '—';
+      const result = insResult && insResult[0];
+      if (!result) throw new Error('Không nhận được phản hồi từ server.');
 
-      setEmployeeStatus('success', '✅', 'Chấm công thành công',
-        `Bạn đã được tự động check-in lúc ${nowStr} · Cách vị trí ${Math.round(dist)}m`);
-      $('btnEmpCheckout').style.display = 'inline-flex';
-      $('btnEmpCheckout').disabled = false;
+      if (result.status === 'ok') {
+        $('infoCheckin').textContent = fmtTime(result.check_in_time);
+        $('infoCheckout').textContent = '—';
+        $('btnEmpCheckout').style.display = 'inline-flex';
+        $('btnEmpCheckout').disabled = false;
+
+        setEmployeeStatus('success', '✅', 'Chấm công thành công',
+          `Đã tự động check-in lúc ${fmtTime(result.check_in_time)} · Cách vị trí ${Math.round(dist)}m`);
+      } else if (result.status === 'already_in') {
+        // Race condition — vừa bị insert bởi tab khác, refresh lại
+        await runAutoCheckin();
+      } else {
+        throw new Error(result.message || 'Không thể check-in.');
+      }
     } catch (err) {
       console.error('Auto check-in error:', err);
       setEmployeeStatus('error', '❌', 'Không thể chấm công', err.message || 'Đã có lỗi xảy ra.');
@@ -1290,90 +1087,84 @@
   $('btnRefreshLoc').addEventListener('click', () => runAutoCheckin());
 
   $('btnEmpCheckout').addEventListener('click', async () => {
-    if (!currentEmployee) return;
-    const btn = $('btnEmpCheckout');
+    if (!currentEmployee || !currentEmployeePassword) return;
+    if (employeeGeoState.busy) return;
+    employeeGeoState.busy = true;
 
-    if (btn.disabled) return;
+    const btn = $('btnEmpCheckout');
     btn.disabled = true;
     btn.textContent = 'Đang xử lý...';
 
     try {
-      // Đảm bảo đã load vị trí trường
-      if (attendanceLocation.lat == null) {
-        await loadSchoolLocation();
-      }
+      if (attendanceLocation.lat == null) await loadSchoolLocation();
       if (attendanceLocation.lat == null) {
         throw new Error('Chưa có cấu hình vị trí trường. Vui lòng liên hệ quản lý.');
       }
 
       setEmployeeStatus('loading', '⏳', 'Đang check-out...', 'Đang xác định vị trí của bạn');
 
-      // Lấy vị trí hiện tại
       const pos = await getPosition();
       const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
-
       $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
 
-      // Kiểm tra phạm vi
       if (dist > attendanceLocation.radiusMeters) {
-        setEmployeeStatus('warning', '📍',
-          'Bạn đang ngoài phạm vi',
-          `Hiện cách vị trí chấm công ${Math.round(dist)}m, cần ở trong bán kính ${attendanceLocation.radiusMeters}m. Hãy di chuyển lại gần và bấm Check-out lại.`);
+        setEmployeeStatus('warning', '📍', 'Bạn đang ngoài phạm vi',
+          `Hiện cách ${Math.round(dist)}m, cần ở trong bán kính ${attendanceLocation.radiusMeters}m. Di chuyển lại gần và bấm Check-out lại.`);
         btn.disabled = false;
         btn.textContent = 'Check-out';
         return;
       }
 
-      // Tìm bản ghi hôm nay
-      const today = todayISO();
-      const { data: rows, error: qErr } = await supabaseClient
-        .from('attendance')
-        .select('id, check_out_time')
-        .eq('employee_id', currentEmployee.username)
-        .eq('work_date', today)
-        .order('check_in_time', { ascending: false })
-        .limit(1);
-      if (qErr) throw qErr;
+      // CHECK-OUT qua RPC
+      const { data: outResult, error: outErr } = await supabaseClient.rpc('employee_checkout', {
+        p_username: currentEmployee.username,
+        p_password: currentEmployeePassword,
+        p_lat: pos.lat,
+        p_lng: pos.lng,
+        p_distance: dist,
+      });
+      if (outErr) throw outErr;
 
-      if (!rows || rows.length === 0) {
-        throw new Error('Không tìm thấy lượt check-in hôm nay. Vui lòng bấm "Kiểm tra lại vị trí".');
-      }
-      if (rows[0].check_out_time) {
-        $('infoCheckout').textContent = fmtTime(rows[0].check_out_time);
-        setEmployeeStatus('success', '✅', 'Đã check-out trước đó',
-          `Bạn đã kết thúc ca làm việc lúc ${fmtTime(rows[0].check_out_time)}`);
+      const result = outResult && outResult[0];
+      if (!result) throw new Error('Không nhận được phản hồi từ server.');
+
+      if (result.status === 'ok') {
+        $('infoCheckout').textContent = fmtTime(result.check_out_time);
         btn.style.display = 'none';
-        return;
+
+        // Tính lại duration
+        const inTime = $('infoCheckin').textContent;
+        const date = todayISO();
+        const checkinISO = new Date(`${date}T${inTime.padStart(5,'0')}:00`);
+        const duration = new Date(result.check_out_time) - checkinISO;
+        if (!isNaN(duration) && duration > 0) {
+          $('infoDurationItem').style.display = 'block';
+          $('infoDuration').textContent = formatDuration(duration);
+        }
+
+        setEmployeeStatus('success', '✅', 'Check-out thành công',
+          `Đã kết thúc ca làm việc lúc ${fmtTime(result.check_out_time)}. Hẹn gặp lại!`);
+      } else if (result.status === 'already_out') {
+        $('infoCheckout').textContent = fmtTime(result.check_out_time);
+        btn.style.display = 'none';
+        setEmployeeStatus('success', '✅', 'Đã check-out trước đó',
+          `Ca làm việc kết thúc lúc ${fmtTime(result.check_out_time)}.`);
+      } else if (result.status === 'not_found') {
+        throw new Error('Không tìm thấy lượt check-in hôm nay. Bấm "Kiểm tra lại vị trí" để đồng bộ.');
+      } else {
+        throw new Error(result.message || 'Không thể check-out.');
       }
-
-      // Cập nhật giờ ra
-      const { error: upErr } = await supabaseClient
-        .from('attendance')
-        .update({
-          check_out_time: new Date().toISOString(),
-          check_out_lat: pos.lat,
-          check_out_lng: pos.lng,
-          check_out_distance: dist,
-        })
-        .eq('id', rows[0].id);
-      if (upErr) throw upErr;
-
-      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      $('infoCheckout').textContent = nowStr;
-
-      setEmployeeStatus('success', '✅', 'Check-out thành công',
-        `Bạn đã kết thúc ca làm việc lúc ${nowStr}. Hẹn gặp lại!`);
-      btn.style.display = 'none';
     } catch (err) {
       console.error('Check-out error:', err);
       let msg = err.message || 'Đã có lỗi xảy ra.';
-      if (err.code === 1 || /denied/i.test(msg)) {
-        msg = 'Bạn đã từ chối quyền định vị. Vào Cài đặt trình duyệt → bật lại quyền Location cho trang này.';
+      if (/denied/i.test(msg)) {
+        msg = 'Bạn đã từ chối quyền định vị. Vào Cài đặt trình duyệt → bật lại quyền Location.';
       }
       setEmployeeStatus('error', '❌', 'Không thể check-out', msg);
       btn.disabled = false;
     } finally {
       btn.textContent = 'Check-out';
+      employeeGeoState.busy = false;
     }
   });
 
@@ -1385,9 +1176,6 @@
     showScreen('login');
   });
 
-  /* =========================================================
-     AUTO REFRESH LOCATION (30s)
-     ========================================================= */
   function startAutoRefresh() {
     stopAutoRefresh();
     autoRefreshTimer = setInterval(() => {
@@ -1398,12 +1186,8 @@
       }
     }, 30000);
   }
-
   function stopAutoRefresh() {
-    if (autoRefreshTimer) {
-      clearInterval(autoRefreshTimer);
-      autoRefreshTimer = null;
-    }
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
   }
 
   /* =========================================================
@@ -1413,7 +1197,6 @@
     currentAdminEmail = email;
     showScreen('admin');
     $('adminHeaderEmail').textContent = email;
-
     $('adminDate').value = todayISO();
     await loadSettingsForAdmin();
     await loadEmployees();
@@ -1429,7 +1212,6 @@
     });
   });
 
-  /* ---------- SETTINGS ---------- */
   async function loadSettingsForAdmin() {
     try {
       const { data, error } = await supabaseClient
@@ -1490,7 +1272,6 @@
     }
   });
 
-  /* ---------- ATTENDANCE DATA ---------- */
   $('btnLoadData').addEventListener('click', async () => {
     const alertEl = $('alertAdmin');
     const btn = $('btnLoadData');
@@ -1498,10 +1279,7 @@
     hideAlert(alertEl);
 
     const date = $('adminDate').value;
-    if (!date) {
-      showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
-      return;
-    }
+    if (!date) { showAlert(alertEl, 'Vui lòng chọn ngày.', 'error'); return; }
 
     btn.disabled = true;
     btn.textContent = 'Đang tải...';
@@ -1547,7 +1325,6 @@
     }
   });
 
-  /* ---------- EMPLOYEES ---------- */
   async function loadEmployees() {
     const tbody = $('usersTableBody');
     const alertEl = $('alertUsers');
@@ -1684,7 +1461,7 @@
      BOOTSTRAP
      ========================================================= */
   async function bootstrap() {
-    // 1) Admin session?
+    // 1) Admin session
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       const { data: roleRow } = await supabaseClient
@@ -1698,15 +1475,16 @@
       }
     }
 
-    // 2) Employee session?
+    // 2) Employee session
     const emp = loadEmployeeSession();
-    if (emp) {
+    if (emp && emp.password) {
+      currentEmployeePassword = emp.password;
       await loadSchoolLocation();
       await openEmployeeDashboard(emp);
       return;
     }
 
-    // 3) Mặc định: login
+    // 3) Login
     showScreen('login');
   }
 
