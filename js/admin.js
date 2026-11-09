@@ -1,14 +1,12 @@
 /* =========================================================
-   ADMIN — MENU DROPDOWN + LỊCH SỬ (compact list) + NHÂN VIÊN
+   ADMIN — MENU + LỊCH SỬ + NHÂN VIÊN + BẢNG CÔNG
    ========================================================= */
 
-let _adminMode = 'day';       // 'day' | 'month'
-let _adminFilterEmp = '';     // username hoặc ''
+let _adminMode = 'day';
+let _adminFilterEmp = '';
 let _bulkDeleting = false;
+let _employeesCache = [];
 
-/* =========================================================
-   MENU DROPDOWN
-   ========================================================= */
 function initAdminMenu() {
   const btn = $('btnAppMenu');
   const dropdown = $('appMenuDropdown');
@@ -27,21 +25,16 @@ function initAdminMenu() {
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (dropdown.classList.contains('show')) closeMenu();
-    else openMenu();
+    if (dropdown.classList.contains('show')) closeMenu(); else openMenu();
   });
 
-  // Click ngoài → đóng
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.app-menu-wrapper')) closeMenu();
   });
-
-  // Phím Esc → đóng
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeMenu();
   });
 
-  // Chọn item → switch tab + đóng
   dropdown.querySelectorAll('.app-menu-item').forEach(item => {
     item.addEventListener('click', () => {
       switchAdminTab(item.dataset.tab);
@@ -51,30 +44,25 @@ function initAdminMenu() {
 }
 
 function switchAdminTab(tab) {
-  const labelMap = { history: 'Chấm công', users: 'Nhân viên' };
+  const labelMap = { history: 'Chấm công', timesheet: 'Bảng công', users: 'Nhân viên' };
 
-  // Panels
   document.querySelectorAll('.tab-panel').forEach(p => {
     p.classList.toggle('active', p.id === 'panel-' + tab);
   });
-
-  // Menu items
   document.querySelectorAll('.app-menu-item').forEach(item => {
     item.classList.toggle('active', item.dataset.tab === tab);
   });
-
-  // Label
   const labelEl = $('appMenuLabel');
   if (labelEl) labelEl.textContent = labelMap[tab] || tab;
 
-  // Load data tương ứng
   if (tab === 'users') loadEmployees();
   else if (tab === 'history') loadHistory();
+  else if (tab === 'timesheet') {
+    populateTimesheetEmployees(_employeesCache);
+    loadAdminTimesheet();
+  }
 }
 
-/* =========================================================
-   OPEN ADMIN SCREEN
-   ========================================================= */
 async function openAdminScreen(email) {
   currentAdminEmail = email;
   showScreen('admin');
@@ -83,7 +71,6 @@ async function openAdminScreen(email) {
   _adminMode = 'day';
   _adminFilterEmp = '';
 
-  // Reset menu về tab Chấm công
   $('appMenuDropdown')?.classList.remove('show');
   $('btnAppMenu')?.classList.remove('active');
   $('btnAppMenu')?.setAttribute('aria-expanded', 'false');
@@ -99,30 +86,25 @@ async function openAdminScreen(email) {
   const labelEl = $('appMenuLabel');
   if (labelEl) labelEl.textContent = 'Chấm công';
 
+  resetTimesheetAdminState();
+
   await Promise.all([loadHistory(), loadEmployees()]);
 }
 
-/* =========================================================
-   RENDER — 1 ROW
-   ========================================================= */
+/* ========== RENDER — ROW ATTENDANCE ========== */
 function renderAttendanceRow(row) {
   const hasOut = !!row.check_out_time;
   const inTime = formatTime(row.check_in_time);
   const outTime = hasOut ? formatTime(row.check_out_time) : null;
   const initial = (row.employee_name || '?').charAt(0).toUpperCase();
-
   const statusPill = hasOut
     ? '<span class="pill pill-ok">Đã về</span>'
     : '<span class="pill pill-wait">Đang làm</span>';
-
   const inPhoto = row.check_in_photo_url
-    ? `<img class="row-photo" src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" loading="lazy" />`
-    : '';
+    ? `<img class="row-photo" src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" loading="lazy" />` : '';
   const outPhoto = row.check_out_photo_url
-    ? `<img class="row-photo" src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" loading="lazy" />`
-    : '';
+    ? `<img class="row-photo" src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" loading="lazy" />` : '';
   const photos = (inPhoto || outPhoto) ? `<span class="row-photos">${inPhoto}${outPhoto}</span>` : '';
-
   const timePart = hasOut
     ? `<span class="t-in">${inTime}</span><span class="t-arrow">→</span><span class="t-out">${outTime}</span>`
     : `<span class="t-in">${inTime}</span><span class="t-arrow">→</span><span class="t-missing">Chưa ra</span>`;
@@ -131,10 +113,7 @@ function renderAttendanceRow(row) {
     <article class="attendance-row" data-record-id="${row.id}">
       <div class="att-avatar">${escapeHtml(initial)}</div>
       <div class="row-body">
-        <div class="row-top">
-          <span class="row-name">${escapeHtml(row.employee_name)}</span>
-          ${statusPill}
-        </div>
+        <div class="row-top"><span class="row-name">${escapeHtml(row.employee_name)}</span>${statusPill}</div>
         <div class="row-bottom">
           <span class="row-times">${timePart}</span>
           <span class="row-sep">·</span>
@@ -142,39 +121,25 @@ function renderAttendanceRow(row) {
           ${photos}
         </div>
       </div>
-      <button class="row-delete"
-              data-action="delete-attendance"
-              data-id="${row.id}"
-              data-name="${escapeHtml(row.employee_name)}"
-              data-date="${escapeHtml(row.work_date || '')}"
-              title="Xoá">🗑</button>
+      <button class="row-delete" data-action="delete-attendance" data-id="${row.id}" data-name="${escapeHtml(row.employee_name)}" data-date="${escapeHtml(row.work_date || '')}" title="Xoá">🗑</button>
     </article>
   `;
 }
 
-/* =========================================================
-   RENDER — STATS BAR
-   ========================================================= */
 function renderStats(data) {
   const statsEl = $('historyStats');
   if (!statsEl) return;
-
   if (_adminMode !== 'day' || !data || data.length === 0) {
     statsEl.style.display = 'none';
     statsEl.innerHTML = '';
     return;
   }
-
   const total = data.length;
   const complete = data.filter(r => r.check_out_time).length;
   const inProgress = total - complete;
-
   let chips = `<span class="stat-chip"><span class="dot total"></span>${total} bản ghi</span>`;
   chips += `<span class="stat-chip"><span class="dot ok"></span>${complete} đã về</span>`;
-  if (inProgress > 0) {
-    chips += `<span class="stat-chip"><span class="dot wait"></span>${inProgress} đang làm</span>`;
-  }
-
+  if (inProgress > 0) chips += `<span class="stat-chip"><span class="dot wait"></span>${inProgress} đang làm</span>`;
   statsEl.innerHTML = `
     <div class="stats-chips">${chips}</div>
     <button class="btn-bulk-delete" id="btnBulkDelete" type="button" title="Xoá tất cả bản ghi ngày này">🗑 Xoá hết</button>
@@ -182,85 +147,54 @@ function renderStats(data) {
   statsEl.style.display = 'flex';
 }
 
-/* =========================================================
-   RENDER — LỊCH SỬ
-   ========================================================= */
 function renderHistory(data) {
   const list = $('historyList');
-
   if (!data || data.length === 0) {
     list.innerHTML = `<p class="empty">Không có dữ liệu${_adminMode === 'month' ? ' trong tháng này' : ' cho ngày này'}.</p>`;
     renderStats(null);
     return;
   }
-
   const sub = $('historySubtitle');
   const dateVal = $('adminDate').value;
   if (sub) {
-    if (_adminMode === 'day') {
-      sub.textContent = dateVal === todayISO() ? 'Hôm nay' : formatDateVN(dateVal);
-    } else {
-      sub.textContent = 'Tháng ' + dateVal.slice(5, 7) + '/' + dateVal.slice(0, 4);
-    }
+    if (_adminMode === 'day') sub.textContent = dateVal === todayISO() ? 'Hôm nay' : formatDateVN(dateVal);
+    else sub.textContent = 'Tháng ' + dateVal.slice(5, 7) + '/' + dateVal.slice(0, 4);
   }
-
   const byDate = {};
   data.forEach(row => {
     if (!byDate[row.work_date]) byDate[row.work_date] = [];
     byDate[row.work_date].push(row);
   });
-
   const dates = Object.keys(byDate).sort().reverse();
   const today = todayISO();
-
   let html = '';
   if (_adminMode === 'month') {
     dates.forEach(d => {
       const isToday = d === today;
       const label = isToday ? 'Hôm nay · ' + formatDateFullVN(d) : formatDateFullVN(d);
-      html += `<div class="day-separator${isToday ? ' today' : ''}">`;
-      html += `<span>${escapeHtml(label)}</span>`;
-      html += `<span class="day-separator-count">${byDate[d].length}</span>`;
-      html += `</div>`;
+      html += `<div class="day-separator${isToday ? ' today' : ''}"><span>${escapeHtml(label)}</span><span class="day-separator-count">${byDate[d].length}</span></div>`;
       html += byDate[d].map(r => renderAttendanceRow(r)).join('');
     });
   } else {
     html = data.map(r => renderAttendanceRow(r)).join('');
   }
-
   list.innerHTML = html;
   renderStats(data);
 }
 
-/* =========================================================
-   RENDER — NHÂN VIÊN
-   ========================================================= */
 function renderEmployeeList(data) {
   const list = $('usersList');
-
   if (!data || data.length === 0) {
     list.innerHTML = '<p class="empty">Chưa có nhân viên nào.</p>';
     return;
   }
-
   list.innerHTML = data.map(e => {
-    const phonePart = e.phone
-      ? `<span class="meta-sep">·</span><span class="meta-phone">${escapeHtml(e.phone)}</span>`
-      : '';
-    const statusPill = e.active
-      ? '<span class="pill pill-ok">Hoạt động</span>'
-      : '<span class="pill pill-fail">Đã khoá</span>';
-
+    const phonePart = e.phone ? `<span class="meta-sep">·</span><span class="meta-phone">${escapeHtml(e.phone)}</span>` : '';
+    const statusPill = e.active ? '<span class="pill pill-ok">Hoạt động</span>' : '<span class="pill pill-fail">Đã khoá</span>';
     return `
       <article class="data-card">
         <header class="employee-head">
-          <div>
-            <h3>${escapeHtml(e.display_name)}</h3>
-            <div class="employee-meta">
-              <code>${escapeHtml(e.username)}</code>
-              ${phonePart}
-            </div>
-          </div>
+          <div><h3>${escapeHtml(e.display_name)}</h3><div class="employee-meta"><code>${escapeHtml(e.username)}</code>${phonePart}</div></div>
           ${statusPill}
         </header>
         <footer class="data-card-actions">
@@ -273,42 +207,29 @@ function renderEmployeeList(data) {
   }).join('');
 }
 
-/* =========================================================
-   POPULATE FILTER
-   ========================================================= */
 function populateFilter(data) {
   const sel = $('adminFilterEmp');
   if (!sel) return;
   const current = sel.value;
   let html = '<option value="">👤 Tất cả nhân viên</option>';
-  (data || []).forEach(e => {
-    html += `<option value="${escapeHtml(e.username)}">${escapeHtml(e.display_name)}</option>`;
-  });
+  (data || []).forEach(e => { html += `<option value="${escapeHtml(e.username)}">${escapeHtml(e.display_name)}</option>`; });
   sel.innerHTML = html;
   if (current) sel.value = current;
 }
 
-/* =========================================================
-   LOAD
-   ========================================================= */
 async function loadHistory() {
   const alertEl = $('alertAdmin');
   const btn = $('btnReloadHistory');
   const date = $('adminDate').value;
   const filterEmp = $('adminFilterEmp')?.value || '';
   hideAlert(alertEl);
-
-  if (!date) {
-    showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
-    return;
-  }
+  if (!date) { showAlert(alertEl, 'Vui lòng chọn ngày.', 'error'); return; }
 
   btn.disabled = true;
   btn.textContent = '⏳';
 
   try {
     let query = supabaseClient.from('attendance').select('*');
-
     if (_adminMode === 'day') {
       query = query.eq('work_date', date);
     } else {
@@ -318,16 +239,11 @@ async function loadHistory() {
       const end = `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
       query = query.gte('work_date', start).lte('work_date', end);
     }
-
     if (filterEmp) query = query.eq('employee_id', filterEmp);
-
-    query = query
-      .order('work_date', { ascending: false })
-      .order('check_in_time', { ascending: true });
+    query = query.order('work_date', { ascending: false }).order('check_in_time', { ascending: true });
 
     const { data, error } = await query;
     if (error) throw error;
-
     renderHistory(data);
   } catch (err) {
     console.error(err);
@@ -343,13 +259,14 @@ async function loadHistory() {
 async function loadEmployees() {
   const alertEl = $('alertUsers');
   hideAlert(alertEl);
-
   try {
     const { data, error } = await supabaseClient
       .from('employees').select('*').order('display_name', { ascending: true });
     if (error) throw error;
+    _employeesCache = data || [];
     renderEmployeeList(data);
     populateFilter(data);
+    populateTimesheetEmployees(data);
   } catch (err) {
     console.error(err);
     showAlert(alertEl, 'Lỗi tải danh sách: ' + (err.message || err), 'error');
@@ -357,20 +274,13 @@ async function loadEmployees() {
   }
 }
 
-/* =========================================================
-   XOÁ 1 RECORD
-   ========================================================= */
 async function deleteAttendance(row, btn) {
   const { id, name, date } = row;
   const alertEl = $('alertAdmin');
 
   const { data: fresh, error: fetchErr } = await supabaseClient
     .from('attendance').select('*').eq('id', Number(id)).maybeSingle();
-
-  if (fetchErr) {
-    showAlert(alertEl, 'Lỗi tải bản ghi: ' + fetchErr.message, 'error');
-    return;
-  }
+  if (fetchErr) { showAlert(alertEl, 'Lỗi tải bản ghi: ' + fetchErr.message, 'error'); return; }
   if (!fresh) {
     showAlert(alertEl, 'Bản ghi không tồn tại (có thể đã bị xoá).', 'warning');
     await loadHistory();
@@ -381,19 +291,14 @@ async function deleteAttendance(row, btn) {
   const outPhotoUrl = fresh.check_out_photo_url || '';
   const dateStr = date ? formatDateVN(date) : '—';
 
-  if (!confirm(
-    `Xoá bản ghi chấm công của "${name}"?\n\n` +
-    `Ngày: ${dateStr}\n\n` +
-    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`
-  )) return;
+  if (!confirm(`Xoá bản ghi chấm công của "${name}"?\n\nNgày: ${dateStr}\n\n⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`)) return;
 
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳';
 
   try {
-    const { error: dbErr } = await supabaseClient
-      .from('attendance').delete().eq('id', Number(id));
+    const { error: dbErr } = await supabaseClient.from('attendance').delete().eq('id', Number(id));
     if (dbErr) throw dbErr;
 
     const paths = [];
@@ -404,14 +309,9 @@ async function deleteAttendance(row, btn) {
 
     let storageNote = '';
     if (paths.length > 0) {
-      const { error: storageErr } = await supabaseClient.storage
-        .from(PHOTO_BUCKET).remove(paths);
-      if (storageErr) {
-        console.warn('Cảnh báo xoá ảnh:', storageErr);
-        storageNote = ' (ảnh có thể chưa xoá hết)';
-      } else {
-        storageNote = ` cùng ${paths.length} ảnh`;
-      }
+      const { error: storageErr } = await supabaseClient.storage.from(PHOTO_BUCKET).remove(paths);
+      if (storageErr) { console.warn(storageErr); storageNote = ' (ảnh có thể chưa xoá hết)'; }
+      else storageNote = ` cùng ${paths.length} ảnh`;
     }
 
     await loadHistory();
@@ -424,37 +324,22 @@ async function deleteAttendance(row, btn) {
   }
 }
 
-/* =========================================================
-   BULK XOÁ
-   ========================================================= */
 async function deleteAllOnDate(date) {
   if (_bulkDeleting) return;
   const alertEl = $('alertAdmin');
   hideAlert(alertEl);
-
   if (!date) return;
 
   const { data: rows, error: fetchErr } = await supabaseClient
     .from('attendance').select('*').eq('work_date', date);
-  if (fetchErr) {
-    showAlert(alertEl, 'Lỗi tải dữ liệu: ' + fetchErr.message, 'error');
-    return;
-  }
-  if (!rows || rows.length === 0) {
-    showAlert(alertEl, 'Không có bản ghi để xoá.', 'warning');
-    return;
-  }
+  if (fetchErr) { showAlert(alertEl, 'Lỗi tải dữ liệu: ' + fetchErr.message, 'error'); return; }
+  if (!rows || rows.length === 0) { showAlert(alertEl, 'Không có bản ghi để xoá.', 'warning'); return; }
 
-  if (!confirm(
-    `Xoá TẤT CẢ ${rows.length} bản ghi chấm công ngày ${formatDateVN(date)}?\n\n` +
-    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`
-  )) return;
+  if (!confirm(`Xoá TẤT CẢ ${rows.length} bản ghi chấm công ngày ${formatDateVN(date)}?\n\n⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`)) return;
 
   _bulkDeleting = true;
-
   try {
-    const { error: dbErr } = await supabaseClient
-      .from('attendance').delete().eq('work_date', date);
+    const { error: dbErr } = await supabaseClient.from('attendance').delete().eq('work_date', date);
     if (dbErr) throw dbErr;
 
     const paths = [];
@@ -467,14 +352,9 @@ async function deleteAllOnDate(date) {
 
     let storageNote = '';
     if (paths.length > 0) {
-      const { error: storageErr } = await supabaseClient.storage
-        .from(PHOTO_BUCKET).remove(paths);
-      if (storageErr) {
-        console.warn('Cảnh báo xoá ảnh:', storageErr);
-        storageNote = ' (một số ảnh có thể chưa xoá hết)';
-      } else {
-        storageNote = ` cùng ${paths.length} ảnh`;
-      }
+      const { error: storageErr } = await supabaseClient.storage.from(PHOTO_BUCKET).remove(paths);
+      if (storageErr) { console.warn(storageErr); storageNote = ' (một số ảnh có thể chưa xoá hết)'; }
+      else storageNote = ` cùng ${paths.length} ảnh`;
     }
 
     await loadHistory();
@@ -487,62 +367,42 @@ async function deleteAllOnDate(date) {
   }
 }
 
-/* =========================================================
-   HANDLERS
-   ========================================================= */
 function initAdminHandlers() {
-  // Menu dropdown
   initAdminMenu();
 
-  // Date
   $('adminDate').addEventListener('change', loadHistory);
   $('btnReloadHistory').addEventListener('click', loadHistory);
 
-  // Mode toggle
   document.querySelectorAll('.mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
       if (mode === _adminMode) return;
       _adminMode = mode;
-      document.querySelectorAll('.mode-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.mode === mode);
-      });
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
       loadHistory();
     });
   });
 
-  // Filter NV
   $('adminFilterEmp').addEventListener('change', (e) => {
     _adminFilterEmp = e.target.value;
     loadHistory();
   });
 
-  // Bulk delete (delegation, button render động)
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#btnBulkDelete')) {
-      deleteAllOnDate($('adminDate').value);
-    }
+    if (e.target.closest('#btnBulkDelete')) deleteAllOnDate($('adminDate').value);
   });
 
-  // Click trong history list
   $('historyList').addEventListener('click', async (e) => {
     const img = e.target.closest('img[data-full]');
-    if (img) {
-      if (img.dataset.full) window.open(img.dataset.full, '_blank');
-      return;
-    }
-
+    if (img) { if (img.dataset.full) window.open(img.dataset.full, '_blank'); return; }
     const delBtn = e.target.closest('[data-action="delete-attendance"]');
     if (delBtn) {
       await deleteAttendance({
-        id: delBtn.dataset.id,
-        name: delBtn.dataset.name,
-        date: delBtn.dataset.date,
+        id: delBtn.dataset.id, name: delBtn.dataset.name, date: delBtn.dataset.date,
       }, delBtn);
     }
   });
 
-  // Employee list actions
   $('usersList').addEventListener('click', async (ev) => {
     const btn = ev.target.closest('[data-action]');
     if (!btn) return;
@@ -565,54 +425,39 @@ function initAdminHandlers() {
       const newPwd = prompt(`Nhập mật khẩu mới cho "${name}":`);
       if (!newPwd) return;
       if (newPwd.length < 4) return showAlert(alertEl, 'Mật khẩu phải >= 4 ký tự.', 'error');
-      const { error } = await supabaseClient.rpc('reset_employee_password', {
-        p_id: id, p_password: newPwd,
-      });
+      const { error } = await supabaseClient.rpc('reset_employee_password', { p_id: id, p_password: newPwd });
       if (error) return showAlert(alertEl, 'Lỗi đổi mật khẩu: ' + error.message, 'error');
       showAlert(alertEl, 'Đã đổi mật khẩu.', 'success');
     }
   });
 
-  // Add employee
   $('btnAddEmployee').addEventListener('click', async () => {
     const alertEl = $('alertUsers');
     const btn = $('btnAddEmployee');
     hideAlert(alertEl);
 
-    const username    = $('newUsername').value.trim();
-    const password    = $('newPassword').value;
+    const username = $('newUsername').value.trim();
+    const password = $('newPassword').value;
     const displayName = $('newDisplayName').value.trim();
-    const phone       = $('newPhone').value.trim();
+    const phone = $('newPhone').value.trim();
 
     if (!username || !password || !displayName) {
-      showAlert(alertEl, 'Vui lòng nhập đủ: tên đăng nhập, mật khẩu, tên hiển thị.', 'error');
-      return;
+      return showAlert(alertEl, 'Vui lòng nhập đủ: tên đăng nhập, mật khẩu, tên hiển thị.', 'error');
     }
-    if (password.length < 4) {
-      showAlert(alertEl, 'Mật khẩu phải từ 4 ký tự.', 'error');
-      return;
-    }
+    if (password.length < 4) return showAlert(alertEl, 'Mật khẩu phải từ 4 ký tự.', 'error');
     if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
-      showAlert(alertEl, 'Tên đăng nhập chỉ gồm chữ, số, gạch dưới, gạch ngang, dấu chấm.', 'error');
-      return;
+      return showAlert(alertEl, 'Tên đăng nhập chỉ gồm chữ, số, gạch dưới, gạch ngang, dấu chấm.', 'error');
     }
-    if (username === 'admin') {
-      showAlert(alertEl, 'Tên "admin" được dành riêng cho quản trị viên.', 'error');
-      return;
-    }
+    if (username === 'admin') return showAlert(alertEl, 'Tên "admin" được dành riêng cho quản trị viên.', 'error');
 
     btn.disabled = true;
     btn.textContent = 'Đang thêm...';
-
     try {
       const { error } = await supabaseClient.rpc('create_employee', {
-        p_username: username,
-        p_password: password,
-        p_display_name: displayName,
-        p_phone: phone || null,
+        p_username: username, p_password: password,
+        p_display_name: displayName, p_phone: phone || null,
       });
       if (error) throw error;
-
       showAlert(alertEl, `Đã thêm nhân viên "${displayName}".`, 'success');
       $('newUsername').value = '';
       $('newPassword').value = '';
@@ -621,9 +466,7 @@ function initAdminHandlers() {
       loadEmployees();
     } catch (err) {
       console.error(err);
-      const msg = (err.message || '').includes('duplicate')
-        ? 'Tên đăng nhập đã tồn tại.'
-        : (err.message || 'Lỗi không xác định');
+      const msg = (err.message || '').includes('duplicate') ? 'Tên đăng nhập đã tồn tại.' : (err.message || 'Lỗi không xác định');
       showAlert(alertEl, 'Lỗi: ' + msg, 'error');
     } finally {
       btn.disabled = false;
@@ -631,7 +474,6 @@ function initAdminHandlers() {
     }
   });
 
-  // Logout
   $('btnAdminLogout').addEventListener('click', async () => {
     await supabaseClient.auth.signOut();
     currentAdminEmail = null;
