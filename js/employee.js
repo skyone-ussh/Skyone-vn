@@ -1,6 +1,6 @@
 /* =========================================================
-   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA (AUTO SUBMIT)
-   Bấm nút → chụp → tự động gửi, không xác nhận
+   EMPLOYEE — CHẤM CÔNG (OPTIMISTIC UI)
+   Flow: Chụp → Hiện ảnh + giờ NGAY → Upload + RPC ngầm
    ========================================================= */
 
 async function openEmployeeScreen(emp) {
@@ -26,22 +26,30 @@ function updateRecordLine(record) {
   dateEl.textContent = formatDateVN(todayISO());
   nameEl.textContent = currentEmployee?.display_name || currentEmployee?.username || '—';
 
+  const isPendingIn  = !!record?._pendingIn;
+  const isPendingOut = !!record?._pendingOut;
+
   if (record) {
     inEl.textContent = formatTime(record.check_in_time);
     inEl.classList.remove('missing');
+    inEl.classList.toggle('pending', isPendingIn);
 
     if (record.check_out_time) {
       outEl.textContent = formatTime(record.check_out_time);
       outEl.classList.remove('missing');
+      outEl.classList.toggle('pending', isPendingOut);
     } else {
       outEl.textContent = 'Chưa ra';
       outEl.classList.add('missing');
+      outEl.classList.remove('pending');
     }
   } else {
     inEl.textContent = 'Chưa vào';
     inEl.classList.add('missing');
+    inEl.classList.remove('pending');
     outEl.textContent = 'Chưa ra';
     outEl.classList.add('missing');
+    outEl.classList.remove('pending');
   }
 }
 
@@ -49,10 +57,12 @@ function renderPhotos(record) {
   const wrap = $('recordPhotos');
   const photos = [];
   if (record?.check_in_photo_url) {
-    photos.push(`<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(record.check_in_photo_url)}" />`);
+    const pending = record._pendingIn ? ' pending' : '';
+    photos.push(`<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào" class="${pending.trim()}" data-full="${escapeHtml(record.check_in_photo_url)}" />`);
   }
   if (record?.check_out_photo_url) {
-    photos.push(`<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(record.check_out_photo_url)}" />`);
+    const pending = record._pendingOut ? ' pending' : '';
+    photos.push(`<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra" class="${pending.trim()}" data-full="${escapeHtml(record.check_out_photo_url)}" />`);
   }
   wrap.innerHTML = photos.join('');
 }
@@ -60,15 +70,16 @@ function renderPhotos(record) {
 function updateActionButton() {
   const btn = $('btnAction');
   const rec = currentTodayRecord;
+  const syncing = !!(rec?._pendingIn || rec?._pendingOut);
 
-  btn.disabled = false;
+  btn.disabled = syncing;
 
   if (!rec) {
     btn.textContent = '📸 Chấm công vào';
     btn.dataset.action = 'checkin';
   } else if (!rec.check_out_time) {
-    btn.textContent = '📸 Chấm công ra';
-    btn.dataset.action = 'checkout';
+    btn.textContent = syncing ? '⏳ Đang đồng bộ...' : '📸 Chấm công ra';
+    btn.dataset.action = syncing ? '' : 'checkout';
   } else {
     btn.textContent = '✅ Đã hoàn thành hôm nay';
     btn.disabled = true;
@@ -108,57 +119,89 @@ async function refreshTodayRecord() {
   }
 }
 
-/* ========== LOADING OVERLAY ========== */
-let loadingCancelled = false;
+/* ========== FLOATING TOAST ========== */
+let toastTimer = null;
 
-function showLoading(text, sub) {
-  loadingCancelled = false;
-  $('loadingText').textContent = text || 'Đang xử lý...';
-  $('loadingSub').textContent = sub || 'Vui lòng không tắt trình duyệt';
-  $('loadingOverlay').classList.add('show');
-  $('btnCancelLoading').disabled = false;
-  $('btnCancelLoading').textContent = 'Huỷ';
-}
-function setLoadingText(text, sub) {
-  $('loadingText').textContent = text;
-  if (sub !== undefined) $('loadingSub').textContent = sub;
-}
-function hideLoading() {
-  $('loadingOverlay').classList.remove('show');
+function showToast(text, kind) {
+  const el = $('floatingToast');
+  const spinner = $('toastSpinner');
+  const icon = $('toastIcon');
+  const textEl = $('toastText');
+
+  // kind: 'syncing' | 'success' | 'error'
+  el.className = 'floating-toast show ' + (kind || 'syncing');
+  textEl.textContent = text;
+
+  if (kind === 'success') {
+    icon.textContent = '✅';
+    icon.style.display = 'inline';
+    spinner.style.display = 'none';
+  } else if (kind === 'error') {
+    icon.textContent = '⚠️';
+    icon.style.display = 'inline';
+    spinner.style.display = 'none';
+  } else {
+    icon.style.display = 'none';
+    spinner.style.display = 'inline-block';
+  }
+
+  if (toastTimer) clearTimeout(toastTimer);
+  if (kind === 'success' || kind === 'error') {
+    toastTimer = setTimeout(() => hideToast(), kind === 'success' ? 2000 : 4000);
+  }
 }
 
-/* ========== XỬ LÝ ẢNH + GỬI ========== */
+function hideToast() {
+  $('floatingToast').classList.remove('show');
+  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+}
+
+/* ========== XỬ LÝ CHÍNH (OPTIMISTIC) ========== */
 async function processAndSubmit(file, action) {
   if (!currentEmployee || !currentEmployeePassword) return;
 
-  showLoading(
-    action === 'checkin' ? 'Đang chấm công vào...' : 'Đang chấm công ra...',
-    'Đang xử lý ảnh...'
+  // ----- BƯỚC 1: OPTIMISTIC UI NGAY LẬP TỨC -----
+  const localUrl = URL.createObjectURL(file);
+  const localTime = new Date().toISOString();
+  const prevRecord = currentTodayRecord ? { ...currentTodayRecord } : null;
+
+  if (action === 'checkin') {
+    currentTodayRecord = {
+      id: 'pending',
+      check_in_time: localTime,
+      check_out_time: null,
+      check_in_photo_url: localUrl,
+      check_out_photo_url: null,
+      _pendingIn: true,
+      _localUrl: localUrl,
+    };
+  } else {
+    currentTodayRecord = {
+      ...currentTodayRecord,
+      check_out_time: localTime,
+      check_out_photo_url: localUrl,
+      _pendingOut: true,
+    };
+  }
+
+  updateRecordLine(currentTodayRecord);
+  renderPhotos(currentTodayRecord);
+  updateActionButton();
+  showToast(
+    action === 'checkin' ? 'Đang đồng bộ chấm công vào...' : 'Đang đồng bộ chấm công ra...',
+    'syncing'
   );
 
+  // ----- BƯỚC 2: UPLOAD + RPC CHẠY NGẦM -----
   try {
-    // ----- Bước 1: Nén ảnh (rất nhanh, ~300-500ms) -----
-    const blob = await compressImage(file, 800, 0.7);
+    // Nén ảnh (600px, WebP nếu được)
+    const blob = await compressImage(file, 600, 0.65);
 
-    if (loadingCancelled) {
-      hideLoading();
-      return;
-    }
-
-    // ----- Bước 2: Upload -----
-    setLoadingText('Đang tải ảnh lên...', 'Vui lòng chờ trong giây lát');
+    // Upload
     const photoUrl = await uploadPhoto(blob, currentEmployee.username, action);
 
-    if (loadingCancelled) {
-      // Ảnh đã upload nhưng user huỷ → orphan file, không nghiêm trọng
-      hideLoading();
-      return;
-    }
-
-    // ----- Bước 3: Gọi RPC lưu record -----
-    setLoadingText('Đang lưu...', 'Sắp xong rồi');
+    // RPC
     const rpcName = action === 'checkin' ? 'employee_checkin' : 'employee_checkout';
-
     const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, {
       p_username: currentEmployee.username,
       p_password: currentEmployeePassword,
@@ -169,9 +212,8 @@ async function processAndSubmit(file, action) {
     const res = result && result[0];
     if (!res) throw new Error('Không nhận được phản hồi từ server.');
 
-    // ----- Bước 4: Xử lý kết quả -----
+    // ----- BƯỚC 3: ĐỒNG BỘ UI VỚI SERVER -----
     if (res.status === 'ok') {
-      // Optimistic UI
       if (action === 'checkin') {
         currentTodayRecord = {
           id: res.record_id,
@@ -180,25 +222,31 @@ async function processAndSubmit(file, action) {
           check_in_photo_url: photoUrl,
           check_out_photo_url: null,
         };
-      } else if (currentTodayRecord) {
+      } else {
         currentTodayRecord.check_out_time = res.check_out_time;
         currentTodayRecord.check_out_photo_url = photoUrl;
+        delete currentTodayRecord._pendingOut;
       }
+      delete currentTodayRecord._pendingIn;
+      delete currentTodayRecord._localUrl;
 
-      hideLoading();
+      URL.revokeObjectURL(localUrl);
       updateRecordLine(currentTodayRecord);
       renderPhotos(currentTodayRecord);
       updateActionButton();
 
-      const successMsg = action === 'checkin'
-        ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
-        : `✅ Đã chấm công ra lúc ${formatTime(res.check_out_time)}`;
-      showAlert($('empAlert'), successMsg, 'success');
+      showToast(
+        action === 'checkin'
+          ? `Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
+          : `Đã chấm công ra lúc ${formatTime(res.check_out_time)}`,
+        'success'
+      );
       return;
     }
 
+    // Status lỗi từ RPC
     if (res.status === 'auth_failed') {
-      hideLoading();
+      URL.revokeObjectURL(localUrl);
       clearEmployeeSession();
       currentEmployee = null;
       showScreen('login');
@@ -207,23 +255,22 @@ async function processAndSubmit(file, action) {
     }
 
     if (res.status === 'already_in' || res.status === 'already_out') {
-      hideLoading();
-      showAlert($('empAlert'), res.message, 'warning');
+      URL.revokeObjectURL(localUrl);
+      showToast(res.message, 'error');
       await refreshTodayRecord();
       return;
     }
 
-    if (res.status === 'not_found') {
-      throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
-    }
-
     throw new Error(res.message || 'Không thể chấm công.');
   } catch (err) {
+    // ----- BƯỚC 4: ROLLBACK KHI LỖI -----
     console.error('Submit error:', err);
-    hideLoading();
-    showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
-    // Cho user thử lại — không reset action button
+    URL.revokeObjectURL(localUrl);
+    currentTodayRecord = prevRecord;
+    updateRecordLine(currentTodayRecord);
+    renderPhotos(currentTodayRecord);
     updateActionButton();
+    showToast('Lỗi: ' + (err.message || 'không xác định'), 'error');
   }
 }
 
@@ -231,7 +278,6 @@ async function processAndSubmit(file, action) {
 function initEmployeeHandlers() {
   const photoInput = $('photoInput');
   const btnAction = $('btnAction');
-  const btnCancel = $('btnCancelLoading');
 
   // Bấm nút → mở camera
   btnAction.addEventListener('click', () => {
@@ -244,26 +290,16 @@ function initEmployeeHandlers() {
     photoInput.click();
   });
 
-  // Chọn/chụp ảnh xong → GỬI LUÔN (không modal xác nhận)
+  // Chụp xong → XỬ LÝ NGAY (không confirm, không loading overlay)
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const action = pendingPhotoAction;
     if (!action) return;
-
-    // Reset input để có thể chụp lại nếu cần
     pendingPhotoAction = null;
 
     await processAndSubmit(file, action);
-  });
-
-  // Nút huỷ loading
-  btnCancel.addEventListener('click', () => {
-    loadingCancelled = true;
-    btnCancel.disabled = true;
-    btnCancel.textContent = 'Đang huỷ...';
-    setLoadingText('Đang huỷ...', 'Vui lòng chờ');
   });
 
   // Xem ảnh full
