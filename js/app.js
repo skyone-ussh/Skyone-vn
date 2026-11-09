@@ -1,15 +1,9 @@
 /* =========================================================
-   BOOTSTRAP + SCREEN ROUTER
+   BOOTSTRAP
    ========================================================= */
 
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = $('screen-' + name);
-  if (target) target.classList.add('active');
-}
-
 async function bootstrap() {
-  // 1) Admin session
+  // 1) Admin
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     const { data: roleRow } = await supabaseClient
@@ -17,18 +11,16 @@ async function bootstrap() {
       .eq('user_id', session.user.id).maybeSingle();
 
     if (roleRow?.role === 'admin') {
-      await loadSchoolLocation();
-      await openAdminDashboard(session.user.email);
+      await openAdminScreen(session.user.email);
       return;
     }
   }
 
-  // 2) Employee session
+  // 2) Employee
   const emp = loadEmployeeSession();
   if (emp && emp.password) {
     currentEmployeePassword = emp.password;
-    await loadSchoolLocation();
-    await openEmployeeDashboard(emp);
+    await openEmployeeScreen(emp);
     return;
   }
 
