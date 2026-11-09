@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</title>
+
+  <!-- Preconnect tới Supabase (giảm 200-400ms lần đầu) -->
+  <link rel="preconnect" href="https://wosgbrafpbigmbhhodov.supabase.co" crossorigin />
+  <link rel="dns-prefetch" href="https://wosgbrafpbigmbhhodov.supabase.co" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
@@ -74,7 +79,6 @@
   <main class="app-main">
     <div class="container">
 
-      <!-- Record line -->
       <div class="record-card" id="recordCard">
         <p class="record-label">Chấm công hôm nay</p>
         <div class="record-line" id="recordLine">
@@ -91,7 +95,6 @@
 
       <div id="empAlert" class="alert"></div>
 
-      <!-- Action button -->
       <div class="action-wrap">
         <button class="btn btn-primary btn-large btn-block" id="btnAction" disabled>
           Đang tải...
@@ -133,7 +136,6 @@
   <main class="app-main">
     <div class="container">
 
-      <!-- TAB LỊCH SỬ CHẤM CÔNG -->
       <section class="tab-panel active" id="panel-history">
         <div class="card">
           <div class="card-toolbar">
@@ -154,7 +156,6 @@
         </div>
       </section>
 
-      <!-- TAB NHÂN VIÊN -->
       <section class="tab-panel" id="panel-users">
         <div class="card">
           <h2>Thêm nhân viên</h2>
@@ -199,6 +200,13 @@
 <!-- ============ PHOTO MODAL ============ -->
 <div class="modal-overlay" id="photoModal">
   <div class="modal photo-modal">
+
+    <!-- Loading overlay -->
+    <div class="photo-loading" id="photoLoading" style="display:none;">
+      <div class="spinner"></div>
+      <p id="photoLoadingText">Đang xử lý...</p>
+    </div>
+
     <h3>Xác nhận ảnh</h3>
     <p class="subtitle" id="photoModalSubtitle">Kiểm tra ảnh trước khi gửi</p>
     <div class="photo-preview-wrap">
