@@ -1,301 +1,266 @@
 /* =========================================================
-   EMPLOYEE FLOW
+   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA
    ========================================================= */
 
-async function openEmployeeDashboard(emp) {
+async function openEmployeeScreen(emp) {
   currentEmployee = emp;
   showScreen('employee');
 
-  $('empHeaderName').textContent   = emp.display_name || emp.username;
-  $('empGreetingName').textContent = emp.display_name || emp.username;
-  $('infoName').textContent        = emp.display_name || emp.username;
-  $('infoUsername').textContent    = emp.username;
-  $('infoDate').textContent        = todayVN();
-  $('infoCheckin').textContent     = '—';
-  $('infoCheckout').textContent    = '—';
-  $('infoDistance').textContent    = '—';
-  $('infoDurationItem').style.display = 'none';
-  $('btnEmpCheckout').style.display = 'none';
-  $('btnEmpCheckout').disabled      = false;
-  $('btnEmpCheckout').textContent   = 'Check-out';
-  $('lastUpdate').textContent       = '';
+  $('empHeaderName').textContent = emp.display_name || emp.username;
+  hideAlert($('empAlert'));
 
-  setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Vui lòng chờ trong giây lát');
-  await loadSchoolLocation();
-  await runAutoCheckin();
-  startAutoRefresh();
+  updateRecordLine(null);
+  $('recordPhotos').innerHTML = '';
+
+  await refreshTodayRecord();
 }
 
-function setEmployeeStatus(kind, icon, title, desc) {
-  const iconEl = $('statusIcon');
-  iconEl.className = 'status-icon ' + kind;
-  iconEl.textContent = icon;
-  $('statusTitle').textContent = title;
-  $('statusDesc').textContent = desc;
-}
+/* ========== RENDER ========== */
+function updateRecordLine(record) {
+  const dateEl = $('rlDate');
+  const nameEl = $('rlName');
+  const inEl   = $('rlIn');
+  const outEl  = $('rlOut');
 
-async function loadSchoolLocation() {
-  try {
-    const { data, error } = await supabaseClient
-      .from('settings').select('*').eq('id', 1).maybeSingle();
-    if (error) throw error;
-    if (data && data.university_lat != null && data.university_lng != null) {
-      attendanceLocation = {
-        lat: data.university_lat,
-        lng: data.university_lng,
-        radiusMeters: data.radius_meters || 200,
-      };
+  // Ngày
+  dateEl.textContent = formatDateVN(todayISO());
+
+  // Tên
+  nameEl.textContent = currentEmployee?.display_name || currentEmployee?.username || '—';
+
+  if (record) {
+    inEl.textContent = formatTime(record.check_in_time);
+    inEl.classList.remove('missing');
+
+    if (record.check_out_time) {
+      outEl.textContent = formatTime(record.check_out_time);
+      outEl.classList.remove('missing');
     } else {
-      attendanceLocation = { lat: null, lng: null, radiusMeters: 200 };
+      outEl.textContent = 'Chưa ra';
+      outEl.classList.add('missing');
     }
-  } catch (err) {
-    console.warn('Không load được settings:', err);
+  } else {
+    inEl.textContent = 'Chưa vào';
+    inEl.classList.add('missing');
+    outEl.textContent = 'Chưa ra';
+    outEl.classList.add('missing');
   }
 }
 
-async function runAutoCheckin() {
-  if (employeeGeoState.busy) return;
-  if (!currentEmployee || !currentEmployeePassword) return;
-  employeeGeoState.busy = true;
-
-  try {
-    // 1) Re-verify session
-    const { data: verifyData, error: verifyErr } = await supabaseClient.rpc('verify_employee', {
-      p_username: currentEmployee.username,
-      p_password: currentEmployeePassword,
-    });
-    if (verifyErr) throw verifyErr;
-    if (!verifyData || verifyData.length === 0) {
-      clearEmployeeSession();
-      currentEmployee = null;
-      showScreen('login');
-      showAlert($('loginAlert'), 'Tài khoản đã bị khoá hoặc mật khẩu đã thay đổi. Vui lòng đăng nhập lại.', 'warning');
-      return;
-    }
-
-    // 2) Lấy vị trí
-    setEmployeeStatus('loading', '⏳', 'Đang kiểm tra vị trí...', 'Xác định vị trí GPS của bạn');
-    const pos = await getPosition();
-    employeeGeoState.pos = pos;
-
-    if (attendanceLocation.lat == null) await loadSchoolLocation();
-    if (attendanceLocation.lat == null) {
-      setEmployeeStatus('error', '⚠️', 'Chưa cấu hình vị trí chấm công',
-        'Admin chưa đặt vị trí trường. Vui lòng liên hệ quản lý.');
-      return;
-    }
-
-    const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
-    employeeGeoState.distance = dist;
-    $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
-    $('lastUpdate').textContent = 'Cập nhật lúc ' + nowVNTime();
-
-    const inRange = dist <= attendanceLocation.radiusMeters;
-
-    // 3) Lấy bản ghi hôm nay qua RPC
-    const { data: todayRows, error: qErr } = await supabaseClient.rpc('get_today_attendance', {
-      p_username: currentEmployee.username,
-      p_password: currentEmployeePassword,
-    });
-    if (qErr) throw qErr;
-
-    const record = todayRows && todayRows[0];
-
-    if (record) {
-      currentCheckinTime = record.check_in_time;
-      $('infoCheckin').textContent  = fmtTime(record.check_in_time);
-      $('infoCheckout').textContent = record.check_out_time ? fmtTime(record.check_out_time) : '—';
-
-      if (record.check_out_time) {
-        const duration = new Date(record.check_out_time) - new Date(record.check_in_time);
-        $('infoDurationItem').style.display = 'block';
-        $('infoDuration').textContent = formatDuration(duration);
-        $('btnEmpCheckout').style.display = 'none';
-
-        setEmployeeStatus('success', '✅', 'Đã hoàn thành ca làm việc',
-          `Vào ${fmtTime(record.check_in_time)} · Ra ${fmtTime(record.check_out_time)} · Tổng ${formatDuration(duration)}`);
-        return;
-      }
-
-      $('btnEmpCheckout').style.display = 'inline-flex';
-      $('btnEmpCheckout').disabled = false;
-
-      if (inRange) {
-        setEmployeeStatus('success', '✅',
-          `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
-          `Bạn đang trong phạm vi (cách ${Math.round(dist)}m). Bấm Check-out khi kết thúc ca làm việc.`);
-      } else {
-        setEmployeeStatus('warning', '📍',
-          `Đã chấm công vào lúc ${fmtTime(record.check_in_time)}`,
-          `Bạn đang ở ngoài phạm vi (cách ${Math.round(dist)}m, bán kính ${attendanceLocation.radiusMeters}m). Di chuyển vào trong phạm vi rồi bấm Check-out.`);
-      }
-      return;
-    }
-
-    // Chưa check-in
-    if (!inRange) {
-      setEmployeeStatus('warning', '📍', 'Bạn đang ở ngoài phạm vi chấm công',
-        `Khoảng cách: ${Math.round(dist)}m · Bán kính: ${attendanceLocation.radiusMeters}m. Di chuyển vào phạm vi để tự động chấm công.`);
-      $('btnEmpCheckout').style.display = 'none';
-      return;
-    }
-
-    // Tự động check-in
-    setEmployeeStatus('loading', '⏳', 'Đang chấm công...', 'Xác nhận vị trí và ghi nhận giờ vào');
-
-    const { data: insResult, error: insErr } = await supabaseClient.rpc('employee_checkin', {
-      p_username: currentEmployee.username,
-      p_password: currentEmployeePassword,
-      p_lat: pos.lat,
-      p_lng: pos.lng,
-      p_distance: dist,
-    });
-    if (insErr) throw insErr;
-
-    const result = insResult && insResult[0];
-    if (!result) throw new Error('Không nhận được phản hồi từ server.');
-
-    if (result.status === 'ok') {
-      currentCheckinTime = result.check_in_time;
-      $('infoCheckin').textContent  = fmtTime(result.check_in_time);
-      $('infoCheckout').textContent = '—';
-      $('btnEmpCheckout').style.display = 'inline-flex';
-      $('btnEmpCheckout').disabled = false;
-
-      setEmployeeStatus('success', '✅', 'Chấm công thành công',
-        `Đã tự động check-in lúc ${fmtTime(result.check_in_time)} · Cách vị trí ${Math.round(dist)}m`);
-    } else if (result.status === 'already_in') {
-      currentCheckinTime = result.check_in_time;
-      $('infoCheckin').textContent = fmtTime(result.check_in_time);
-      $('btnEmpCheckout').style.display = 'inline-flex';
-      $('btnEmpCheckout').disabled = false;
-      setEmployeeStatus('success', '✅',
-        `Đã chấm công vào lúc ${fmtTime(result.check_in_time)}`,
-        'Bấm Check-out khi kết thúc ca làm việc.');
-    } else if (result.status === 'auth_failed') {
-      clearEmployeeSession();
-      currentEmployee = null;
-      showScreen('login');
-      showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
-    } else {
-      throw new Error(result.message || 'Không thể check-in.');
-    }
-  } catch (err) {
-    console.error('Auto check-in error:', err);
-    setEmployeeStatus('error', '❌', 'Không thể chấm công', err.message || 'Đã có lỗi xảy ra.');
-  } finally {
-    employeeGeoState.busy = false;
+function renderPhotos(record) {
+  const wrap = $('recordPhotos');
+  const photos = [];
+  if (record?.check_in_photo_url) {
+    photos.push(`<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(record.check_in_photo_url)}" />`);
   }
+  if (record?.check_out_photo_url) {
+    photos.push(`<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(record.check_out_photo_url)}" />`);
+  }
+  wrap.innerHTML = photos.join('');
 }
 
-function startAutoRefresh() {
-  stopAutoRefresh();
-  autoRefreshTimer = setInterval(() => {
-    if ($('screen-employee').classList.contains('active')
-        && currentEmployee
-        && !employeeGeoState.busy) {
-      runAutoCheckin();
-    }
-  }, 30000);
-}
-function stopAutoRefresh() {
-  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
-}
+function updateActionButton() {
+  const btn = $('btnAction');
+  const rec = currentTodayRecord;
 
-/* ========== HANDLERS ========== */
-function initEmployeeHandlers() {
-  $('btnRefreshLoc').addEventListener('click', () => runAutoCheckin());
+  btn.disabled = false;
 
-  $('btnEmpCheckout').addEventListener('click', async () => {
-    if (!currentEmployee || !currentEmployeePassword) return;
-    if (employeeGeoState.busy) return;
-    employeeGeoState.busy = true;
-
-    const btn = $('btnEmpCheckout');
+  if (!rec) {
+    btn.textContent = '📸 Chấm công vào';
+    btn.dataset.action = 'checkin';
+  } else if (!rec.check_out_time) {
+    btn.textContent = '📸 Chấm công ra';
+    btn.dataset.action = 'checkout';
+  } else {
+    btn.textContent = '✅ Đã hoàn thành hôm nay';
     btn.disabled = true;
-    btn.textContent = 'Đang xử lý...';
+    delete btn.dataset.action;
+  }
+}
+
+/* ========== LOAD ========== */
+async function refreshTodayRecord() {
+  if (!currentEmployee || !currentEmployeePassword) return;
+
+  try {
+    const { data: rows, error } = await supabaseClient.rpc('get_today_attendance', {
+      p_username: currentEmployee.username,
+      p_password: currentEmployeePassword,
+    });
+    if (error) throw error;
+
+    // null = mật khẩu bị đổi hoặc tài khoản bị khoá
+    if (!rows) {
+      clearEmployeeSession();
+      currentEmployee = null;
+      showScreen('login');
+      showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+      return;
+    }
+
+    currentTodayRecord = rows[0] || null;
+    updateRecordLine(currentTodayRecord);
+    renderPhotos(currentTodayRecord);
+    updateActionButton();
+  } catch (err) {
+    console.error('refreshTodayRecord error:', err);
+    showAlert($('empAlert'), 'Không tải được dữ liệu: ' + (err.message || err), 'error');
+    updateRecordLine(null);
+    $('btnAction').disabled = true;
+    $('btnAction').textContent = 'Lỗi tải dữ liệu';
+  }
+}
+
+/* ========== PHOTO FLOW ========== */
+function initEmployeeHandlers() {
+  const photoInput = $('photoInput');
+  const modal = $('photoModal');
+  const btnRetake = $('btnRetake');
+  const btnConfirm = $('btnConfirmPhoto');
+  const btnAction = $('btnAction');
+
+  // Bấm nút → mở camera
+  btnAction.addEventListener('click', () => {
+    const action = btnAction.dataset.action;
+    if (!action) return;
+    pendingPhotoAction = action;
+    $('photoModalSubtitle').textContent = action === 'checkin'
+      ? 'Ảnh xác nhận vào ca'
+      : 'Ảnh xác nhận ra ca';
+    hideAlert($('empAlert'));
+    photoInput.value = '';
+    photoInput.click();
+  });
+
+  // Chọn/chụp ảnh xong
+  photoInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     try {
-      if (attendanceLocation.lat == null) await loadSchoolLocation();
-      if (attendanceLocation.lat == null) {
-        throw new Error('Chưa có cấu hình vị trí trường. Vui lòng liên hệ quản lý.');
-      }
-
-      setEmployeeStatus('loading', '⏳', 'Đang check-out...', 'Đang xác định vị trí của bạn');
-
-      const pos = await getPosition();
-      const dist = haversine(pos.lat, pos.lng, attendanceLocation.lat, attendanceLocation.lng);
-      $('infoDistance').textContent = `${Math.round(dist)} m / ${attendanceLocation.radiusMeters} m`;
-
-      if (dist > attendanceLocation.radiusMeters) {
-        setEmployeeStatus('warning', '📍', 'Bạn đang ngoài phạm vi',
-          `Hiện cách ${Math.round(dist)}m, cần ở trong bán kính ${attendanceLocation.radiusMeters}m. Di chuyển lại gần và bấm Check-out lại.`);
-        btn.disabled = false;
-        btn.textContent = 'Check-out';
-        return;
-      }
-
-      const { data: outResult, error: outErr } = await supabaseClient.rpc('employee_checkout', {
-        p_username: currentEmployee.username,
-        p_password: currentEmployeePassword,
-        p_lat: pos.lat,
-        p_lng: pos.lng,
-        p_distance: dist,
-      });
-      if (outErr) throw outErr;
-
-      const result = outResult && outResult[0];
-      if (!result) throw new Error('Không nhận được phản hồi từ server.');
-
-      if (result.status === 'ok') {
-        $('infoCheckout').textContent = fmtTime(result.check_out_time);
-        btn.style.display = 'none';
-
-        if (currentCheckinTime) {
-          const duration = new Date(result.check_out_time) - new Date(currentCheckinTime);
-          if (duration > 0) {
-            $('infoDurationItem').style.display = 'block';
-            $('infoDuration').textContent = formatDuration(duration);
-          }
-        }
-
-        setEmployeeStatus('success', '✅', 'Check-out thành công',
-          `Đã kết thúc ca làm việc lúc ${fmtTime(result.check_out_time)}. Hẹn gặp lại!`);
-      } else if (result.status === 'already_out') {
-        $('infoCheckout').textContent = fmtTime(result.check_out_time);
-        btn.style.display = 'none';
-        setEmployeeStatus('success', '✅', 'Đã check-out trước đó',
-          `Ca làm việc kết thúc lúc ${fmtTime(result.check_out_time)}.`);
-      } else if (result.status === 'not_found') {
-        throw new Error('Không tìm thấy lượt check-in hôm nay. Bấm "Kiểm tra lại vị trí" để đồng bộ.');
-      } else if (result.status === 'auth_failed') {
-        clearEmployeeSession();
-        currentEmployee = null;
-        showScreen('login');
-        showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
-      } else {
-        throw new Error(result.message || 'Không thể check-out.');
-      }
+      const compressed = await compressImage(file, 1200, 0.8);
+      pendingPhotoBlob = compressed;
+      const url = URL.createObjectURL(compressed);
+      $('photoPreview').src = url;
+      modal.classList.add('show');
     } catch (err) {
-      console.error('Check-out error:', err);
-      let msg = err.message || 'Đã có lỗi xảy ra.';
-      if (/denied/i.test(msg)) {
-        msg = 'Bạn đã từ chối quyền định vị. Vào Cài đặt trình duyệt → bật lại quyền Location.';
-      }
-      setEmployeeStatus('error', '❌', 'Không thể check-out', msg);
-      btn.disabled = false;
-    } finally {
-      btn.textContent = 'Check-out';
-      employeeGeoState.busy = false;
+      console.error(err);
+      showAlert($('empAlert'), 'Không xử lý được ảnh: ' + (err.message || err), 'error');
     }
   });
 
+  // Chụp lại
+  btnRetake.addEventListener('click', () => {
+    modal.classList.remove('show');
+    pendingPhotoBlob = null;
+    const preview = $('photoPreview');
+    if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+    preview.src = '';
+    setTimeout(() => photoInput.click(), 100);
+  });
+
+  // Đóng modal khi click nền
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('show');
+      pendingPhotoBlob = null;
+      const preview = $('photoPreview');
+      if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+      preview.src = '';
+    }
+  });
+
+  // Xác nhận → upload + ghi record
+  btnConfirm.addEventListener('click', async () => {
+    if (!pendingPhotoBlob || !pendingPhotoAction || !currentEmployee) return;
+
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = 'Đang gửi...';
+
+    try {
+      // 1) Upload ảnh
+      const photoUrl = await uploadPhoto(
+        pendingPhotoBlob,
+        currentEmployee.username,
+        pendingPhotoAction
+      );
+
+      // 2) Gọi RPC
+      let rpcName, rpcParams;
+      if (pendingPhotoAction === 'checkin') {
+        rpcName = 'employee_checkin';
+        rpcParams = {
+          p_username: currentEmployee.username,
+          p_password: currentEmployeePassword,
+          p_photo_url: photoUrl,
+        };
+      } else {
+        rpcName = 'employee_checkout';
+        rpcParams = {
+          p_username: currentEmployee.username,
+          p_password: currentEmployeePassword,
+          p_photo_url: photoUrl,
+        };
+      }
+
+      const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, rpcParams);
+      if (rpcErr) throw rpcErr;
+
+      const res = result && result[0];
+      if (!res) throw new Error('Không nhận được phản hồi từ server.');
+
+      // 3) Xử lý kết quả
+      if (res.status === 'ok') {
+        modal.classList.remove('show');
+        const preview = $('photoPreview');
+        if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+        preview.src = '';
+        pendingPhotoBlob = null;
+
+        const msg = pendingPhotoAction === 'checkin'
+          ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time || res.check_out_time)}`
+          : `✅ Đã chấm công ra lúc ${formatTime(res.check_out_time)}`;
+        showAlert($('empAlert'), msg, 'success');
+
+        await refreshTodayRecord();
+      } else if (res.status === 'auth_failed') {
+        clearEmployeeSession();
+        currentEmployee = null;
+        modal.classList.remove('show');
+        showScreen('login');
+        showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
+      } else if (res.status === 'already_in' || res.status === 'already_out') {
+        modal.classList.remove('show');
+        pendingPhotoBlob = null;
+        showAlert($('empAlert'), res.message, 'warning');
+        await refreshTodayRecord();
+      } else if (res.status === 'not_found') {
+        throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
+      } else {
+        throw new Error(res.message || 'Không thể chấm công.');
+      }
+    } catch (err) {
+      console.error('Check-in/out error:', err);
+      showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
+    } finally {
+      btnConfirm.disabled = false;
+      btnConfirm.textContent = 'Xác nhận';
+    }
+  });
+
+  // Xem ảnh full
+  $('recordPhotos').addEventListener('click', (e) => {
+    const img = e.target.closest('img[data-full]');
+    if (!img) return;
+    const url = img.dataset.full;
+    if (url) window.open(url, '_blank');
+  });
+
+  // Logout
   $('btnEmpLogout').addEventListener('click', () => {
-    stopAutoRefresh();
     clearEmployeeSession();
     currentEmployee = null;
-    currentCheckinTime = null;
-    employeeGeoState = { busy: false, pos: null, distance: null };
+    currentTodayRecord = null;
     showScreen('login');
   });
 }
