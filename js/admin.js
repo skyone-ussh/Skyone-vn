@@ -1,40 +1,43 @@
 /* =========================================================
-   ADMIN FLOW
+   ADMIN — LỊCH SỬ CHẤM CÔNG + NHÂN VIÊN
    ========================================================= */
 
-async function openAdminDashboard(email) {
+async function openAdminScreen(email) {
   currentAdminEmail = email;
   showScreen('admin');
   $('adminHeaderEmail').textContent = email;
   $('adminDate').value = todayISO();
-  await loadSettingsForAdmin();
+  await loadHistory();
   await loadEmployees();
-  // Auto-load dữ liệu chấm công ngày hôm nay
-  await loadAttendanceData();
 }
 
-/* =========================================================
-   RENDER — Attendance Card (Fix 2: gọn, không vị trí, giờ vào/ra cùng dòng)
-   ========================================================= */
-function renderAttendanceList(data) {
-  const list = $('adminAttendanceList');
+/* ========== RENDER — LỊCH SỬ ========== */
+function renderHistory(data) {
+  const list = $('historyList');
 
   if (!data || data.length === 0) {
     list.innerHTML = '<p class="empty">Không có dữ liệu chấm công cho ngày này.</p>';
     return;
   }
 
-  list.innerHTML = data.map((row) => {
+  list.innerHTML = data.map(row => {
     const hasOut = !!row.check_out_time;
-    const inTime  = fmtTime(row.check_in_time);
-    const outTime = hasOut ? fmtTime(row.check_out_time) : '—';
+    const inTime  = formatTime(row.check_in_time);
+    const outTime = hasOut ? formatTime(row.check_out_time) : '—';
     const outClass = hasOut ? 'time-value' : 'time-value muted';
     const statusPill = hasOut
       ? '<span class="pill pill-ok">Đã về</span>'
       : '<span class="pill pill-wait">Đang làm</span>';
 
+    const inPhoto = row.check_in_photo_url
+      ? `<div class="photo-caption"><img src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" /><span>Vào</span></div>`
+      : '';
+    const outPhoto = row.check_out_photo_url
+      ? `<div class="photo-caption"><img src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" /><span>Ra</span></div>`
+      : '';
+
     return `
-      <article class="data-card attendance-card">
+      <article class="data-card">
         <header class="attendance-head">
           <div>
             <h3>${escapeHtml(row.employee_name)}</h3>
@@ -53,14 +56,13 @@ function renderAttendanceList(data) {
             <span class="${outClass}">${outTime}</span>
           </div>
         </div>
+        ${inPhoto || outPhoto ? `<div class="attendance-photos">${inPhoto}${outPhoto}</div>` : ''}
       </article>
     `;
   }).join('');
 }
 
-/* =========================================================
-   RENDER — Employee Card (Fix 3: bỏ STT, SĐT cùng dòng username)
-   ========================================================= */
+/* ========== RENDER — NHÂN VIÊN ========== */
 function renderEmployeeList(data) {
   const list = $('usersList');
 
@@ -69,7 +71,7 @@ function renderEmployeeList(data) {
     return;
   }
 
-  list.innerHTML = data.map((e) => {
+  list.innerHTML = data.map(e => {
     const phonePart = e.phone
       ? `<span class="meta-sep">·</span><span class="meta-phone">${escapeHtml(e.phone)}</span>`
       : '';
@@ -78,7 +80,7 @@ function renderEmployeeList(data) {
       : '<span class="pill pill-fail">Đã khoá</span>';
 
     return `
-      <article class="data-card employee-card">
+      <article class="data-card">
         <header class="employee-head">
           <div>
             <h3>${escapeHtml(e.display_name)}</h3>
@@ -99,29 +101,34 @@ function renderEmployeeList(data) {
   }).join('');
 }
 
-/* =========================================================
-   DATA LOADERS
-   ========================================================= */
-async function loadSettingsForAdmin() {
+/* ========== LOAD ========== */
+async function loadHistory() {
+  const alertEl = $('alertAdmin');
+  const btn = $('btnReloadHistory');
+  const date = $('adminDate').value;
+  hideAlert(alertEl);
+
+  if (!date) {
+    showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
   try {
     const { data, error } = await supabaseClient
-      .from('settings').select('*').eq('id', 1).maybeSingle();
+      .from('attendance').select('*').eq('work_date', date)
+      .order('check_in_time', { ascending: true });
     if (error) throw error;
-    if (data && data.university_lat != null && data.university_lng != null) {
-      $('savedLoc').textContent =
-        `${Number(data.university_lat).toFixed(5)}, ${Number(data.university_lng).toFixed(5)} · Bán kính ${data.radius_meters || 200}m`;
-      $('radiusInput').value = data.radius_meters || 200;
-      attendanceLocation = {
-        lat: data.university_lat,
-        lng: data.university_lng,
-        radiusMeters: data.radius_meters || 200,
-      };
-    } else {
-      $('savedLoc').textContent = 'Chưa cài đặt';
-    }
+    renderHistory(data);
   } catch (err) {
-    console.warn(err);
-    $('savedLoc').textContent = 'Lỗi tải';
+    console.error(err);
+    showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
+    $('historyList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄';
   }
 }
 
@@ -141,39 +148,7 @@ async function loadEmployees() {
   }
 }
 
-async function loadAttendanceData() {
-  const alertEl = $('alertAdmin');
-  const btn = $('btnLoadData');
-  const date = $('adminDate').value;
-
-  hideAlert(alertEl);
-  if (!date) {
-    showAlert(alertEl, 'Vui lòng chọn ngày.', 'error');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '⏳';
-
-  try {
-    const { data, error } = await supabaseClient
-      .from('attendance').select('*').eq('work_date', date)
-      .order('check_in_time', { ascending: true });
-    if (error) throw error;
-    renderAttendanceList(data);
-  } catch (err) {
-    console.error(err);
-    showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
-    $('adminAttendanceList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🔄';
-  }
-}
-
-/* =========================================================
-   HANDLERS
-   ========================================================= */
+/* ========== HANDLERS ========== */
 function initAdminHandlers() {
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
@@ -181,59 +156,23 @@ function initAdminHandlers() {
       const name = tab.dataset.tab;
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
-      if (name === 'settings') loadSettingsForAdmin();
-      if (name === 'users')    loadEmployees();
-      if (name === 'attendance' && !$('adminAttendanceList').innerHTML.trim()) {
-        loadAttendanceData();
-      }
+      if (name === 'users') loadEmployees();
+      if (name === 'history') loadHistory();
     });
   });
 
-  // Date change → auto load (Fix 1)
-  $('adminDate').addEventListener('change', () => loadAttendanceData());
+  // Date change → auto reload
+  $('adminDate').addEventListener('change', loadHistory);
+  $('btnReloadHistory').addEventListener('click', loadHistory);
 
-  // Nút refresh icon
-  $('btnLoadData').addEventListener('click', () => loadAttendanceData());
-
-  // Đặt vị trí
-  $('btnSetLocation').addEventListener('click', async () => {
-    const alertEl = $('alertSettings');
-    const btn = $('btnSetLocation');
-    hideAlert(alertEl);
-
-    const radius = parseInt($('radiusInput').value, 10);
-    if (!radius || radius < 10) {
-      showAlert(alertEl, 'Bán kính phải là số >= 10 mét.', 'error');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Đang lấy vị trí...';
-
-    try {
-      const pos = await getPosition();
-      const { error } = await supabaseClient.from('settings').update({
-        university_lat: pos.lat,
-        university_lng: pos.lng,
-        radius_meters: radius,
-        updated_at: new Date().toISOString(),
-      }).eq('id', 1);
-      if (error) throw error;
-
-      attendanceLocation = { lat: pos.lat, lng: pos.lng, radiusMeters: radius };
-      $('savedLoc').textContent =
-        `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)} · Bán kính ${radius}m`;
-      showAlert(alertEl, `Đã lưu vị trí: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)} (bán kính ${radius}m)`, 'success');
-    } catch (err) {
-      console.error(err);
-      showAlert(alertEl, 'Lỗi: ' + (err.message || err), 'error');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '📍 Đặt vị trí hiện tại';
-    }
+  // Xem ảnh full
+  $('historyList').addEventListener('click', (e) => {
+    const img = e.target.closest('img[data-full]');
+    if (!img) return;
+    if (img.dataset.full) window.open(img.dataset.full, '_blank');
   });
 
-  // Employee list actions
+  // Employee actions
   $('usersList').addEventListener('click', async (ev) => {
     const btn = ev.target.closest('[data-action]');
     if (!btn) return;
@@ -264,7 +203,7 @@ function initAdminHandlers() {
     }
   });
 
-  // Thêm nhân viên
+  // Add employee
   $('btnAddEmployee').addEventListener('click', async () => {
     const alertEl = $('alertUsers');
     const btn = $('btnAddEmployee');
@@ -322,7 +261,7 @@ function initAdminHandlers() {
     }
   });
 
-  // Logout admin
+  // Logout
   $('btnAdminLogout').addEventListener('click', async () => {
     await supabaseClient.auth.signOut();
     currentAdminEmail = null;
