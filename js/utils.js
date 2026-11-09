@@ -87,6 +87,19 @@ async function uploadPhoto(blob, username, type) {
   return urlData.publicUrl;
 }
 
+/**
+ * Trích xuất storage path từ public URL.
+ * VD: https://xxx.supabase.co/storage/v1/object/public/attendance-photos/user/2026-11-09/checkin-123.jpg
+ *     → user/2026-11-09/checkin-123.jpg
+ */
+function extractStoragePath(publicUrl) {
+  if (!publicUrl) return null;
+  const marker = `/${PHOTO_BUCKET}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(publicUrl.substring(idx + marker.length).split('?')[0]);
+}
+
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const target = $('screen-' + name);
