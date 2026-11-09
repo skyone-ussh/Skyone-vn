@@ -1,5 +1,5 @@
 /* =========================================================
-   ADMIN — LỊCH SỬ CHẤM CÔNG + NHÂN VIÊN
+   ADMIN — LỊCH SỬ CHẤM CÔNG + NHÂN VIÊN + XOÁ
    ========================================================= */
 
 async function openAdminScreen(email) {
@@ -47,7 +47,7 @@ function renderHistory(data) {
           </div>
           <div class="head-actions">
             ${statusPill}
-            <button class="btn-icon-sm" 
+            <button class="btn-icon-sm"
                     data-action="delete-attendance"
                     data-id="${row.id}"
                     data-name="${escapeHtml(row.employee_name)}"
@@ -135,6 +135,11 @@ async function loadHistory() {
       .from('attendance').select('*').eq('work_date', date)
       .order('check_in_time', { ascending: true });
     if (error) throw error;
+
+    // Cache record để lấy URL ảnh khi xoá
+    window._attendanceCache = {};
+    (data || []).forEach(row => { window._attendanceCache[String(row.id)] = row; });
+
     renderHistory(data);
   } catch (err) {
     console.error(err);
@@ -169,7 +174,7 @@ async function deleteAttendance(row, btn) {
   const { id, name, date } = row;
   const alertEl = $('alertAdmin');
 
-  // Lấy URL ảnh từ record cache
+  // Lấy URL ảnh từ cache
   const cache = window._attendanceCache || {};
   const record = cache[String(id)];
   const inPhotoUrl  = record?.check_in_photo_url  || '';
@@ -216,14 +221,13 @@ async function deleteAttendance(row, btn) {
 
     if (dbErr) throw dbErr;
 
-    // ----- 3) Refresh + thông báo -----
-    const dateVal = $('adminDate').value;
-    const { data: refreshed } = await supabaseClient
-      .from('attendance').select('*').eq('work_date', dateVal)
-      .order('check_in_time', { ascending: true });
-
-    renderHistory(refreshed || []);
-    showAlert(alertEl, `Đã xoá bản ghi của "${name}"${paths.length > 0 ? ' cùng ' + paths.length + ' ảnh' : ''}.`, 'success');
+    // ----- 3) Refresh list + thông báo -----
+    await loadHistory();
+    showAlert(
+      alertEl,
+      `Đã xoá bản ghi của "${name}"${paths.length > 0 ? ' cùng ' + paths.length + ' ảnh' : ''}.`,
+      'success'
+    );
   } catch (err) {
     console.error('Delete error:', err);
     showAlert(alertEl, 'Lỗi xoá: ' + (err.message || err), 'error');
@@ -271,7 +275,7 @@ function initAdminHandlers() {
     }
   });
 
-  // Employee actions
+  // Employee list actions
   $('usersList').addEventListener('click', async (ev) => {
     const btn = ev.target.closest('[data-action]');
     if (!btn) return;
