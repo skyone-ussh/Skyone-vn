@@ -1,75 +1,118 @@
 /* =========================================================
-   ADMIN — LỊCH SỬ CHẤM CÔNG + NHÂN VIÊN + XOÁ
+   ADMIN — LỊCH SỬ (Ngày/Tháng, Filter NV, Bulk delete) + NHÂN VIÊN
    ========================================================= */
+
+let _adminMode = 'day';       // 'day' | 'month'
+let _adminFilterEmp = '';     // username hoặc ''
 
 async function openAdminScreen(email) {
   currentAdminEmail = email;
   showScreen('admin');
   $('adminHeaderEmail').textContent = email;
   $('adminDate').value = todayISO();
-  await loadHistory();
-  await loadEmployees();
+  _adminMode = 'day';
+  _adminFilterEmp = '';
+
+  await Promise.all([loadHistory(), loadEmployees()]);
 }
 
 /* =========================================================
-   RENDER — LỊCH SỬ (có nút xoá)
+   RENDER — LỊCH SỬ (group theo ngày)
    ========================================================= */
+function renderHistoryCard(row) {
+  const hasOut = !!row.check_out_time;
+  const inTime  = formatTime(row.check_in_time);
+  const outTime = hasOut ? formatTime(row.check_out_time) : '—';
+  const outClass = hasOut ? 'time-value' : 'time-value muted';
+  const statusPill = hasOut
+    ? '<span class="pill pill-ok">Đã về</span>'
+    : '<span class="pill pill-wait">Đang làm</span>';
+
+  const inPhoto = row.check_in_photo_url
+    ? `<div class="photo-caption"><img src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" /><span>Vào</span></div>`
+    : '';
+  const outPhoto = row.check_out_photo_url
+    ? `<div class="photo-caption"><img src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" /><span>Ra</span></div>`
+    : '';
+
+  return `
+    <article class="data-card" data-record-id="${row.id}">
+      <header class="attendance-head">
+        <div>
+          <h3>${escapeHtml(row.employee_name)}</h3>
+          <code>${escapeHtml(row.employee_id || '')}</code>
+        </div>
+        <div class="head-actions">
+          ${statusPill}
+          <button class="btn-icon-sm"
+                  data-action="delete-attendance"
+                  data-id="${row.id}"
+                  data-name="${escapeHtml(row.employee_name)}"
+                  data-date="${escapeHtml(row.work_date || '')}"
+                  title="Xoá bản ghi">🗑</button>
+        </div>
+      </header>
+      <div class="attendance-times">
+        <div class="time-block">
+          <span class="time-label">Vào</span>
+          <span class="time-value">${inTime}</span>
+        </div>
+        <div class="time-divider">→</div>
+        <div class="time-block">
+          <span class="time-label">Ra</span>
+          <span class="${outClass}">${outTime}</span>
+        </div>
+      </div>
+      ${inPhoto || outPhoto ? `<div class="attendance-photos">${inPhoto}${outPhoto}</div>` : ''}
+    </article>
+  `;
+}
+
 function renderHistory(data) {
   const list = $('historyList');
+  const bulkBtn = $('btnBulkDelete');
 
   if (!data || data.length === 0) {
-    list.innerHTML = '<p class="empty">Không có dữ liệu chấm công cho ngày này.</p>';
+    list.innerHTML = `<p class="empty">Không có dữ liệu${_adminMode === 'month' ? ' trong tháng này' : ' cho ngày này'}.</p>`;
+    bulkBtn.style.display = 'none';
     return;
   }
 
-  list.innerHTML = data.map(row => {
-    const hasOut = !!row.check_out_time;
-    const inTime  = formatTime(row.check_in_time);
-    const outTime = hasOut ? formatTime(row.check_out_time) : '—';
-    const outClass = hasOut ? 'time-value' : 'time-value muted';
-    const statusPill = hasOut
-      ? '<span class="pill pill-ok">Đã về</span>'
-      : '<span class="pill pill-wait">Đang làm</span>';
+  // Group by work_date
+  const byDate = {};
+  data.forEach(row => {
+    const d = row.work_date;
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(row);
+  });
 
-    const inPhoto = row.check_in_photo_url
-      ? `<div class="photo-caption"><img src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" /><span>Vào</span></div>`
-      : '';
-    const outPhoto = row.check_out_photo_url
-      ? `<div class="photo-caption"><img src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" /><span>Ra</span></div>`
-      : '';
+  const dates = Object.keys(byDate).sort().reverse();
+  const today = todayISO();
 
-    return `
-      <article class="data-card" data-record-id="${row.id}">
-        <header class="attendance-head">
-          <div>
-            <h3>${escapeHtml(row.employee_name)}</h3>
-            <code>${escapeHtml(row.employee_id || '')}</code>
-          </div>
-          <div class="head-actions">
-            ${statusPill}
-            <button class="btn-icon-sm"
-                    data-action="delete-attendance"
-                    data-id="${row.id}"
-                    data-name="${escapeHtml(row.employee_name)}"
-                    data-date="${escapeHtml(row.work_date || '')}"
-                    title="Xoá bản ghi">🗑</button>
-          </div>
-        </header>
-        <div class="attendance-times">
-          <div class="time-block">
-            <span class="time-label">Vào</span>
-            <span class="time-value">${inTime}</span>
-          </div>
-          <div class="time-divider">→</div>
-          <div class="time-block">
-            <span class="time-label">Ra</span>
-            <span class="${outClass}">${outTime}</span>
-          </div>
-        </div>
-        ${inPhoto || outPhoto ? `<div class="attendance-photos">${inPhoto}${outPhoto}</div>` : ''}
-      </article>
-    `;
-  }).join('');
+  let html = '';
+  dates.forEach(d => {
+    const isToday = d === today;
+    const headerLabel = isToday ? 'Hôm nay' : formatDateFullVN(d);
+    const count = byDate[d].length;
+
+    html += `<div class="day-group-header${isToday ? ' today' : ''}">`;
+    html += `<span>${escapeHtml(headerLabel)}</span>`;
+    html += `<span class="day-count">${count} bản ghi</span>`;
+    html += `</div>`;
+
+    html += byDate[d].map(row => renderHistoryCard(row)).join('');
+  });
+
+  list.innerHTML = html;
+
+  // Bulk delete chỉ hiện ở mode Ngày
+  if (_adminMode === 'day' && dates.length === 1) {
+    bulkBtn.style.display = 'block';
+    bulkBtn.textContent = `🗑 Xoá tất cả ${byDate[dates[0]].length} bản ghi ngày này`;
+    bulkBtn.disabled = false;
+  } else {
+    bulkBtn.style.display = 'none';
+  }
 }
 
 /* =========================================================
@@ -114,12 +157,28 @@ function renderEmployeeList(data) {
 }
 
 /* =========================================================
+   POPULATE FILTER
+   ========================================================= */
+function populateFilter(data) {
+  const sel = $('adminFilterEmp');
+  if (!sel) return;
+  const current = sel.value;
+  let html = '<option value="">👤 Tất cả nhân viên</option>';
+  (data || []).forEach(e => {
+    html += `<option value="${escapeHtml(e.username)}">${escapeHtml(e.display_name)}</option>`;
+  });
+  sel.innerHTML = html;
+  if (current) sel.value = current;
+}
+
+/* =========================================================
    LOAD
    ========================================================= */
 async function loadHistory() {
   const alertEl = $('alertAdmin');
   const btn = $('btnReloadHistory');
   const date = $('adminDate').value;
+  const filterEmp = $('adminFilterEmp')?.value || '';
   hideAlert(alertEl);
 
   if (!date) {
@@ -131,20 +190,41 @@ async function loadHistory() {
   btn.textContent = '⏳';
 
   try {
-    const { data, error } = await supabaseClient
-      .from('attendance').select('*').eq('work_date', date)
+    let query = supabaseClient.from('attendance').select('*');
+
+    if (_adminMode === 'day') {
+      query = query.eq('work_date', date);
+    } else {
+      // Mode tháng: dùng ngày đang chọn để lấy tháng
+      const [y, m] = date.split('-').map(Number);
+      const last = new Date(y, m, 0).getDate();
+      const start = `${y}-${String(m).padStart(2, '0')}-01`;
+      const end = `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
+      query = query.gte('work_date', start).lte('work_date', end);
+    }
+
+    if (filterEmp) query = query.eq('employee_id', filterEmp);
+
+    query = query
+      .order('work_date', { ascending: false })
       .order('check_in_time', { ascending: true });
+
+    const { data, error } = await query;
     if (error) throw error;
 
-    // Cache record để lấy URL ảnh khi xoá
-    window._attendanceCache = {};
-    (data || []).forEach(row => { window._attendanceCache[String(row.id)] = row; });
-
     renderHistory(data);
+
+    // Update subtitle
+    const sub = $('historySubtitle');
+    if (sub) {
+      if (_adminMode === 'day') sub.textContent = 'Theo ngày ' + formatDateVN(date);
+      else sub.textContent = 'Theo tháng ' + date.slice(5, 7) + '/' + date.slice(0, 4);
+    }
   } catch (err) {
     console.error(err);
     showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
     $('historyList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
+    $('btnBulkDelete').style.display = 'none';
   } finally {
     btn.disabled = false;
     btn.textContent = '🔄';
@@ -160,6 +240,7 @@ async function loadEmployees() {
       .from('employees').select('*').order('display_name', { ascending: true });
     if (error) throw error;
     renderEmployeeList(data);
+    populateFilter(data);
   } catch (err) {
     console.error(err);
     showAlert(alertEl, 'Lỗi tải danh sách: ' + (err.message || err), 'error');
@@ -168,19 +249,30 @@ async function loadEmployees() {
 }
 
 /* =========================================================
-   XOÁ ATTENDANCE (record + ảnh storage)
+   XOÁ 1 RECORD — fetch tươi DB trước, xoá DB trước ảnh
    ========================================================= */
 async function deleteAttendance(row, btn) {
   const { id, name, date } = row;
   const alertEl = $('alertAdmin');
 
-  // Lấy URL ảnh từ cache
-  const cache = window._attendanceCache || {};
-  const record = cache[String(id)];
-  const inPhotoUrl  = record?.check_in_photo_url  || '';
-  const outPhotoUrl = record?.check_out_photo_url || '';
+  // 1. Fetch tươi từ DB (không dùng cache)
+  const { data: fresh, error: fetchErr } = await supabaseClient
+    .from('attendance').select('*').eq('id', Number(id)).maybeSingle();
 
+  if (fetchErr) {
+    showAlert(alertEl, 'Lỗi tải bản ghi: ' + fetchErr.message, 'error');
+    return;
+  }
+  if (!fresh) {
+    showAlert(alertEl, 'Bản ghi không tồn tại (có thể đã bị xoá).', 'warning');
+    await loadHistory();
+    return;
+  }
+
+  const inPhotoUrl  = fresh.check_in_photo_url  || '';
+  const outPhotoUrl = fresh.check_out_photo_url || '';
   const dateStr = date ? formatDateVN(date) : '—';
+
   const confirmMsg =
     `Xoá bản ghi chấm công của "${name}"?\n\n` +
     `Ngày: ${dateStr}\n\n` +
@@ -189,48 +281,113 @@ async function deleteAttendance(row, btn) {
 
   if (!confirm(confirmMsg)) return;
 
-  // Disable nút để tránh double-click
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳';
 
   try {
-    // ----- 1) Xoá ảnh khỏi Storage -----
+    // 2. Xoá DB trước (an toàn hơn)
+    const { error: dbErr } = await supabaseClient
+      .from('attendance')
+      .delete()
+      .eq('id', Number(id));
+    if (dbErr) throw dbErr;
+
+    // 3. Xoá ảnh sau
     const paths = [];
     const inPath  = extractStoragePath(inPhotoUrl);
     const outPath = extractStoragePath(outPhotoUrl);
     if (inPath)  paths.push(inPath);
     if (outPath) paths.push(outPath);
 
+    let storageNote = '';
     if (paths.length > 0) {
       const { error: storageErr } = await supabaseClient.storage
         .from(PHOTO_BUCKET)
         .remove(paths);
-
       if (storageErr) {
-        // Không chặn xoá record — ưu tiên dọn database
         console.warn('Cảnh báo xoá ảnh:', storageErr);
+        storageNote = ' (ảnh có thể chưa xoá hết)';
+      } else {
+        storageNote = ` cùng ${paths.length} ảnh`;
       }
     }
 
-    // ----- 2) Xoá record khỏi DB -----
-    const { error: dbErr } = await supabaseClient
-      .from('attendance')
-      .delete()
-      .eq('id', Number(id));
-
-    if (dbErr) throw dbErr;
-
-    // ----- 3) Refresh list + thông báo -----
     await loadHistory();
-    showAlert(
-      alertEl,
-      `Đã xoá bản ghi của "${name}"${paths.length > 0 ? ' cùng ' + paths.length + ' ảnh' : ''}.`,
-      'success'
-    );
+    showAlert(alertEl, `Đã xoá bản ghi của "${name}"${storageNote}.`, 'success');
   } catch (err) {
     console.error('Delete error:', err);
     showAlert(alertEl, 'Lỗi xoá: ' + (err.message || err), 'error');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+/* =========================================================
+   BULK XOÁ — tất cả bản ghi của 1 ngày
+   ========================================================= */
+async function deleteAllOnDate(date) {
+  const alertEl = $('alertAdmin');
+  const btn = $('btnBulkDelete');
+  hideAlert(alertEl);
+
+  if (!date) return;
+
+  // Fetch tươi
+  const { data: rows, error: fetchErr } = await supabaseClient
+    .from('attendance').select('*').eq('work_date', date);
+  if (fetchErr) {
+    showAlert(alertEl, 'Lỗi tải dữ liệu: ' + fetchErr.message, 'error');
+    return;
+  }
+  if (!rows || rows.length === 0) {
+    showAlert(alertEl, 'Không có bản ghi để xoá.', 'warning');
+    return;
+  }
+
+  const confirmMsg =
+    `Xoá TẤT CẢ ${rows.length} bản ghi chấm công ngày ${formatDateVN(date)}?\n\n` +
+    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\n` +
+    `Không thể hoàn tác.`;
+  if (!confirm(confirmMsg)) return;
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang xoá...';
+
+  try {
+    // 1. Xoá DB trước
+    const { error: dbErr } = await supabaseClient
+      .from('attendance').delete().eq('work_date', date);
+    if (dbErr) throw dbErr;
+
+    // 2. Xoá ảnh sau
+    const paths = [];
+    rows.forEach(r => {
+      const inPath  = extractStoragePath(r.check_in_photo_url);
+      const outPath = extractStoragePath(r.check_out_photo_url);
+      if (inPath)  paths.push(inPath);
+      if (outPath) paths.push(outPath);
+    });
+
+    let storageNote = '';
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabaseClient.storage
+        .from(PHOTO_BUCKET).remove(paths);
+      if (storageErr) {
+        console.warn('Cảnh báo xoá ảnh:', storageErr);
+        storageNote = ' (một số ảnh có thể chưa xoá hết)';
+      } else {
+        storageNote = ` cùng ${paths.length} ảnh`;
+      }
+    }
+
+    await loadHistory();
+    showAlert(alertEl, `Đã xoá ${rows.length} bản ghi${storageNote}.`, 'success');
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    showAlert(alertEl, 'Lỗi xoá: ' + (err.message || err), 'error');
+  } finally {
     btn.disabled = false;
     btn.textContent = originalText;
   }
@@ -251,20 +408,43 @@ function initAdminHandlers() {
     });
   });
 
-  // Date change → auto reload
+  // Date
   $('adminDate').addEventListener('change', loadHistory);
   $('btnReloadHistory').addEventListener('click', loadHistory);
 
+  // Mode toggle
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (mode === _adminMode) return;
+      _adminMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+      loadHistory();
+    });
+  });
+
+  // Filter NV
+  $('adminFilterEmp').addEventListener('change', (e) => {
+    _adminFilterEmp = e.target.value;
+    loadHistory();
+  });
+
+  // Bulk delete
+  $('btnBulkDelete').addEventListener('click', () => {
+    const date = $('adminDate').value;
+    deleteAllOnDate(date);
+  });
+
   // Click trong history list
   $('historyList').addEventListener('click', async (e) => {
-    // Xem ảnh full
     const img = e.target.closest('img[data-full]');
     if (img) {
       if (img.dataset.full) window.open(img.dataset.full, '_blank');
       return;
     }
 
-    // Nút xoá
     const delBtn = e.target.closest('[data-action="delete-attendance"]');
     if (delBtn) {
       await deleteAttendance({
