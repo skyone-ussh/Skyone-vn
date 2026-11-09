@@ -631,3 +631,86 @@ body {
   .ts-month-nav { width: 100%; justify-content: space-between; }
   .ts-month-nav span { flex: 1; }
 }
+/* ==================== INLINE EDIT INPUT ==================== */
+.ts-cell-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  cursor: text;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+.ts-cell-input::-webkit-outer-spin-button,
+.ts-cell-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ts-cell-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 500;
+  opacity: 1;
+}
+.ts-day-cell.sun .ts-cell-input::placeholder,
+.ts-ot-cell.sun .ts-cell-input::placeholder {
+  color: transparent;
+}
+/* Focus effect */
+.ts-day-cell:focus-within,
+.ts-ot-cell:focus-within {
+  box-shadow: inset 0 0 0 2px var(--ocean-500);
+  background: #fff !important;
+  z-index: 2;
+}
+/* Fix iOS zoom khi gõ */
+@media (max-width: 500px) {
+  .ts-cell-input { font-size: 16px; }
+}
+
+/* ==================== PANEL ACCORDION ==================== */
+.ts-panel-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ts-panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ts-panel-title-group .ts-panel-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ts-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.ts-panel-header.is-open .ts-chevron {
+  transform: rotate(180deg);
+}
+.ts-panel-header:hover {
+  background: var(--ocean-100);
+}
+.ts-panel-body {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+}
