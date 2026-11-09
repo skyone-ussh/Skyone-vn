@@ -11,7 +11,9 @@ async function openAdminScreen(email) {
   await loadEmployees();
 }
 
-/* ========== RENDER — LỊCH SỬ ========== */
+/* =========================================================
+   RENDER — LỊCH SỬ (có nút xoá)
+   ========================================================= */
 function renderHistory(data) {
   const list = $('historyList');
 
@@ -37,13 +39,21 @@ function renderHistory(data) {
       : '';
 
     return `
-      <article class="data-card">
+      <article class="data-card" data-record-id="${row.id}">
         <header class="attendance-head">
           <div>
             <h3>${escapeHtml(row.employee_name)}</h3>
             <code>${escapeHtml(row.employee_id || '')}</code>
           </div>
-          ${statusPill}
+          <div class="head-actions">
+            ${statusPill}
+            <button class="btn-icon-sm" 
+                    data-action="delete-attendance"
+                    data-id="${row.id}"
+                    data-name="${escapeHtml(row.employee_name)}"
+                    data-date="${escapeHtml(row.work_date || '')}"
+                    title="Xoá bản ghi">🗑</button>
+          </div>
         </header>
         <div class="attendance-times">
           <div class="time-block">
@@ -62,7 +72,9 @@ function renderHistory(data) {
   }).join('');
 }
 
-/* ========== RENDER — NHÂN VIÊN ========== */
+/* =========================================================
+   RENDER — NHÂN VIÊN
+   ========================================================= */
 function renderEmployeeList(data) {
   const list = $('usersList');
 
@@ -101,7 +113,9 @@ function renderEmployeeList(data) {
   }).join('');
 }
 
-/* ========== LOAD ========== */
+/* =========================================================
+   LOAD
+   ========================================================= */
 async function loadHistory() {
   const alertEl = $('alertAdmin');
   const btn = $('btnReloadHistory');
@@ -148,7 +162,79 @@ async function loadEmployees() {
   }
 }
 
-/* ========== HANDLERS ========== */
+/* =========================================================
+   XOÁ ATTENDANCE (record + ảnh storage)
+   ========================================================= */
+async function deleteAttendance(row, btn) {
+  const { id, name, date } = row;
+  const alertEl = $('alertAdmin');
+
+  // Lấy URL ảnh từ record cache
+  const cache = window._attendanceCache || {};
+  const record = cache[String(id)];
+  const inPhotoUrl  = record?.check_in_photo_url  || '';
+  const outPhotoUrl = record?.check_out_photo_url || '';
+
+  const dateStr = date ? formatDateVN(date) : '—';
+  const confirmMsg =
+    `Xoá bản ghi chấm công của "${name}"?\n\n` +
+    `Ngày: ${dateStr}\n\n` +
+    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\n` +
+    `Không thể hoàn tác.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // Disable nút để tránh double-click
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  try {
+    // ----- 1) Xoá ảnh khỏi Storage -----
+    const paths = [];
+    const inPath  = extractStoragePath(inPhotoUrl);
+    const outPath = extractStoragePath(outPhotoUrl);
+    if (inPath)  paths.push(inPath);
+    if (outPath) paths.push(outPath);
+
+    if (paths.length > 0) {
+      const { error: storageErr } = await supabaseClient.storage
+        .from(PHOTO_BUCKET)
+        .remove(paths);
+
+      if (storageErr) {
+        // Không chặn xoá record — ưu tiên dọn database
+        console.warn('Cảnh báo xoá ảnh:', storageErr);
+      }
+    }
+
+    // ----- 2) Xoá record khỏi DB -----
+    const { error: dbErr } = await supabaseClient
+      .from('attendance')
+      .delete()
+      .eq('id', Number(id));
+
+    if (dbErr) throw dbErr;
+
+    // ----- 3) Refresh + thông báo -----
+    const dateVal = $('adminDate').value;
+    const { data: refreshed } = await supabaseClient
+      .from('attendance').select('*').eq('work_date', dateVal)
+      .order('check_in_time', { ascending: true });
+
+    renderHistory(refreshed || []);
+    showAlert(alertEl, `Đã xoá bản ghi của "${name}"${paths.length > 0 ? ' cùng ' + paths.length + ' ảnh' : ''}.`, 'success');
+  } catch (err) {
+    console.error('Delete error:', err);
+    showAlert(alertEl, 'Lỗi xoá: ' + (err.message || err), 'error');
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+/* =========================================================
+   HANDLERS
+   ========================================================= */
 function initAdminHandlers() {
   // Tabs
   document.querySelectorAll('.tab').forEach(tab => {
@@ -165,11 +251,24 @@ function initAdminHandlers() {
   $('adminDate').addEventListener('change', loadHistory);
   $('btnReloadHistory').addEventListener('click', loadHistory);
 
-  // Xem ảnh full
-  $('historyList').addEventListener('click', (e) => {
+  // Click trong history list
+  $('historyList').addEventListener('click', async (e) => {
+    // Xem ảnh full
     const img = e.target.closest('img[data-full]');
-    if (!img) return;
-    if (img.dataset.full) window.open(img.dataset.full, '_blank');
+    if (img) {
+      if (img.dataset.full) window.open(img.dataset.full, '_blank');
+      return;
+    }
+
+    // Nút xoá
+    const delBtn = e.target.closest('[data-action="delete-attendance"]');
+    if (delBtn) {
+      await deleteAttendance({
+        id: delBtn.dataset.id,
+        name: delBtn.dataset.name,
+        date: delBtn.dataset.date,
+      }, delBtn);
+    }
   });
 
   // Employee actions
