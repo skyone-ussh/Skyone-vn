@@ -43,15 +43,18 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
   const month = isAdmin ? _tsAdminMonth : _tsUserMonth;
   const dataMap = isAdmin ? _tsAdminData : _tsUserData;
   
-  // Header Row
+  // Header Row (Có data-date để click)
   html += '<div class="ts-grid-row">';
-  html += '<div class="ts-label-col" style="background:transparent; border:none;"></div>'; // Góc trống
+  html += '<div class="ts-label-col" style="background:transparent; border:none;"></div>'; 
   for (let d = startDay; d <= endDay; d++) {
     const ds = _tsDateStr(year, month, d);
     const isSun = _tsDow(ds) === 'CN';
     const isToday = isCurrentMonth && (d === new Date().getDate());
-    const headCls = isSun ? ' sun' : '';
-    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
+    const cellData = dataMap[ds] || {};
+    const hasComplaint = (cellData.complaint_count || 0) > 0;
+    
+    const headCls = `ts-day-head${isSun ? ' sun' : ''}${isToday ? ' is-today' : ''}${hasComplaint ? ' has-complaint' : ''}`;
+    html += `<div class="${headCls}" data-date="${ds}">${d}</div>`;
   }
   html += '</div>';
 
@@ -65,10 +68,9 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
     const cellData = dataMap[ds] || {};
     const valWork = cellData.work_days;
     const hasComplaint = (cellData.complaint_count || 0) > 0;
-    const isSelected = isAdmin && ds === _tsAdminSelected;
 
     const readonlyCls = isAdmin ? '' : ' readonly';
-    const dayCellCls = `ts-day-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+    const dayCellCls = `ts-day-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
     
     let txt = _tsFmtNum(valWork);
     if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txt = 'O';
@@ -91,10 +93,9 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
     const cellData = dataMap[ds] || {};
     const valOT = cellData.overtime_hours;
     const hasComplaint = (cellData.complaint_count || 0) > 0;
-    const isSelected = isAdmin && ds === _tsAdminSelected;
 
     const readonlyCls = isAdmin ? '' : ' readonly';
-    const otCellCls = `ts-ot-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+    const otCellCls = `ts-ot-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
     
     let txt = _tsFmtNum(valOT);
     const inner = isAdmin 
@@ -198,11 +199,22 @@ function renderAdminTimesheetGrid() {
 
   wrap.innerHTML = html;
 
-  // Bind events
+  // 1. Bind sự kiện CLICK vào HEADER NGÀY để mở Bottom Sheet
+  wrap.querySelectorAll('.ts-day-head').forEach(head => {
+    head.addEventListener('click', () => {
+      if (head.dataset.date) selectAdminDate(head.dataset.date);
+    });
+  });
+
+  // 2. Bind sự kiện cho INPUT (chỉ để gõ phím, không mở Sheet)
   wrap.querySelectorAll('.ts-cell-input').forEach(inp => {
     inp.addEventListener('focus', (e) => {
       e.target.select(); // Auto bôi đen số cũ
-      selectAdminDate(e.target.dataset.date);
+      
+      // Highlight nhẹ header để biết đang nhập ở ngày nào
+      const ds = e.target.dataset.date;
+      wrap.querySelectorAll('.ts-day-head').forEach(h => h.classList.remove('active-head'));
+      wrap.querySelectorAll(`.ts-day-head[data-date="${ds}"]`).forEach(h => h.classList.add('active-head'));
     });
 
     inp.addEventListener('change', (e) => {
@@ -320,7 +332,7 @@ function updateAdminTotals() {
 }
 
 /* =========================================================
-   BOTTOM SHEET LOGIC
+   BOTTOM SHEET LOGIC (Chỉ mở khi click Header Ngày)
    ========================================================= */
 function getBottomSheet() {
   let sheet = $('tsBottomSheet');
@@ -399,7 +411,6 @@ function getBottomSheet() {
         const input = document.querySelector(`.ts-cell-input[data-date="${_tsAdminSelected}"][data-type="${type}"]`);
         if (input) input.value = val;
         
-        // Đóng bottom sheet nếu cần (hoặc giữ lại). Tốt nhất là đóng khi chọn xong
         closeBottomSheet();
       };
     });
@@ -410,15 +421,7 @@ function getBottomSheet() {
 }
 
 async function selectAdminDate(dateStr) {
-  if (_tsAdminSelected === dateStr) {
-    // Nếu đang chọn ngày này rồi, chỉ mở lại sheet
-    getBottomSheet().classList.add('show');
-    return;
-  }
   _tsAdminSelected = dateStr;
-
-  document.querySelectorAll('.ts-day-cell.selected, .ts-ot-cell.selected').forEach(el => el.classList.remove('selected'));
-  document.querySelectorAll(`.ts-day-cell[data-date="${dateStr}"], .ts-ot-cell[data-date="${dateStr}"]`).forEach(el => el.classList.add('selected'));
 
   const sheet = getBottomSheet();
   $('bsDateTitle').textContent = `${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}`;
@@ -521,6 +524,9 @@ async function addAdminComplaint() {
     _tsAdminData[_tsAdminSelected].complaint_count = (_tsAdminData[_tsAdminSelected].complaint_count || 0) + 1;
 
     const count = _tsAdminData[_tsAdminSelected].complaint_count;
+    
+    // Update header (thêm chấm vàng) và cell (đổi màu)
+    document.querySelectorAll(`.ts-day-head[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('has-complaint'));
     document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
       el.classList.toggle('has-complaint', count > 0);
     });
@@ -552,6 +558,9 @@ async function deleteAdminComplaint(id) {
     }
     
     const count = _tsAdminData[_tsAdminSelected]?.complaint_count || 0;
+    
+    // Update header (xoá chấm vàng nếu hết) và cell
+    document.querySelectorAll(`.ts-day-head[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.toggle('has-complaint', count > 0));
     document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
       el.classList.toggle('has-complaint', count > 0);
     });
