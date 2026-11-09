@@ -1,7 +1,3 @@
-/* =========================================================
-   HELPERS
-   ========================================================= */
-
 const $ = (id) => document.getElementById(id);
 
 function showAlert(el, msg, type) {
@@ -13,38 +9,21 @@ function hideAlert(el) {
   if (el) el.className = 'alert';
 }
 
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = d => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 function todayISO() {
-  // Theo timezone VN để nhất quán với server
   const now = new Date();
   const vn = new Date(now.getTime() + (now.getTimezoneOffset() + 420) * 60000);
   return `${vn.getFullYear()}-${String(vn.getMonth()+1).padStart(2,'0')}-${String(vn.getDate()).padStart(2,'0')}`;
 }
 
-function todayVN() {
-  return new Date().toLocaleDateString('vi-VN', {
-    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
-  });
+function formatDateVN(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function fmtTime(iso) {
+function formatTime(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtCoord(lat, lng) {
-  if (lat == null || lng == null) return '—';
-  return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
 }
 
 function escapeHtml(s) {
@@ -53,40 +32,63 @@ function escapeHtml(s) {
   }[m]));
 }
 
-function formatDuration(ms) {
-  if (!ms || ms < 0) return '—';
-  const totalMin = Math.floor(ms / 60000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h === 0) return `${m} phút`;
-  if (m === 0) return `${h} giờ`;
-  return `${h} giờ ${m} phút`;
-}
-
-function nowVNTime() {
-  return new Date().toLocaleTimeString('vi-VN', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
-  });
-}
-
-function getPosition() {
+/**
+ * Nén ảnh trước khi upload: max 1200px, JPEG 0.8
+ */
+async function compressImage(file, maxDim = 1200, quality = 0.8) {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      return reject(new Error('Trình duyệt không hỗ trợ định vị.'));
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      err => {
-        let msg = 'Không lấy được vị trí.';
-        if (err.code === err.PERMISSION_DENIED)
-          msg = 'Bạn đã từ chối quyền định vị. Vui lòng bật lại trong cài đặt trình duyệt.';
-        else if (err.code === err.POSITION_UNAVAILABLE)
-          msg = 'Không xác định được vị trí. Kiểm tra GPS / kết nối mạng.';
-        else if (err.code === err.TIMEOUT)
-          msg = 'Hết thời gian chờ định vị. Thử lại.';
-        reject(new Error(msg));
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-    );
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Không nén được ảnh.'));
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Không đọc được file ảnh.'));
+    };
+    img.src = url;
   });
+}
+
+/**
+ * Upload ảnh lên Supabase Storage. Trả về public URL.
+ */
+async function uploadPhoto(blob, username, type) {
+  const date = todayISO();
+  const path = `${username}/${date}/${type}-${Date.now()}.jpg`;
+
+  const { data, error } = await supabaseClient.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+
+  if (error) throw error;
+
+  const { data: urlData } = supabaseClient.storage
+    .from(PHOTO_BUCKET)
+    .getPublicUrl(data.path);
+
+  return urlData.publicUrl;
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = $('screen-' + name);
+  if (target) target.classList.add('active');
 }
