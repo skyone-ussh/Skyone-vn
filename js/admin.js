@@ -1,11 +1,80 @@
 /* =========================================================
-   ADMIN — LỊCH SỬ (compact list) + NHÂN VIÊN
+   ADMIN — MENU DROPDOWN + LỊCH SỬ (compact list) + NHÂN VIÊN
    ========================================================= */
 
 let _adminMode = 'day';       // 'day' | 'month'
 let _adminFilterEmp = '';     // username hoặc ''
 let _bulkDeleting = false;
 
+/* =========================================================
+   MENU DROPDOWN
+   ========================================================= */
+function initAdminMenu() {
+  const btn = $('btnAppMenu');
+  const dropdown = $('appMenuDropdown');
+  if (!btn || !dropdown) return;
+
+  const closeMenu = () => {
+    dropdown.classList.remove('show');
+    btn.classList.remove('active');
+    btn.setAttribute('aria-expanded', 'false');
+  };
+  const openMenu = () => {
+    dropdown.classList.add('show');
+    btn.classList.add('active');
+    btn.setAttribute('aria-expanded', 'true');
+  };
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (dropdown.classList.contains('show')) closeMenu();
+    else openMenu();
+  });
+
+  // Click ngoài → đóng
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.app-menu-wrapper')) closeMenu();
+  });
+
+  // Phím Esc → đóng
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+
+  // Chọn item → switch tab + đóng
+  dropdown.querySelectorAll('.app-menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      switchAdminTab(item.dataset.tab);
+      closeMenu();
+    });
+  });
+}
+
+function switchAdminTab(tab) {
+  const labelMap = { history: 'Chấm công', users: 'Nhân viên' };
+
+  // Panels
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-' + tab);
+  });
+
+  // Menu items
+  document.querySelectorAll('.app-menu-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.tab === tab);
+  });
+
+  // Label
+  const labelEl = $('appMenuLabel');
+  if (labelEl) labelEl.textContent = labelMap[tab] || tab;
+
+  // Load data tương ứng
+  if (tab === 'users') loadEmployees();
+  else if (tab === 'history') loadHistory();
+}
+
+/* =========================================================
+   OPEN ADMIN SCREEN
+   ========================================================= */
 async function openAdminScreen(email) {
   currentAdminEmail = email;
   showScreen('admin');
@@ -13,6 +82,22 @@ async function openAdminScreen(email) {
   $('adminDate').value = todayISO();
   _adminMode = 'day';
   _adminFilterEmp = '';
+
+  // Reset menu về tab Chấm công
+  $('appMenuDropdown')?.classList.remove('show');
+  $('btnAppMenu')?.classList.remove('active');
+  $('btnAppMenu')?.setAttribute('aria-expanded', 'false');
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'panel-history');
+  });
+  document.querySelectorAll('.app-menu-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.tab === 'history');
+  });
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === 'day');
+  });
+  const labelEl = $('appMenuLabel');
+  if (labelEl) labelEl.textContent = 'Chấm công';
 
   await Promise.all([loadHistory(), loadEmployees()]);
 }
@@ -74,7 +159,6 @@ function renderStats(data) {
   const statsEl = $('historyStats');
   if (!statsEl) return;
 
-  // Chỉ hiện mode ngày
   if (_adminMode !== 'day' || !data || data.length === 0) {
     statsEl.style.display = 'none';
     statsEl.innerHTML = '';
@@ -110,7 +194,6 @@ function renderHistory(data) {
     return;
   }
 
-  // Subtitle
   const sub = $('historySubtitle');
   const dateVal = $('adminDate').value;
   if (sub) {
@@ -121,7 +204,6 @@ function renderHistory(data) {
     }
   }
 
-  // Group by work_date
   const byDate = {};
   data.forEach(row => {
     if (!byDate[row.work_date]) byDate[row.work_date] = [];
@@ -131,7 +213,6 @@ function renderHistory(data) {
   const dates = Object.keys(byDate).sort().reverse();
   const today = todayISO();
 
-  // Rows
   let html = '';
   if (_adminMode === 'month') {
     dates.forEach(d => {
@@ -277,7 +358,7 @@ async function loadEmployees() {
 }
 
 /* =========================================================
-   XOÁ 1 RECORD — fetch tươi DB, xoá DB trước ảnh
+   XOÁ 1 RECORD
    ========================================================= */
 async function deleteAttendance(row, btn) {
   const { id, name, date } = row;
@@ -311,12 +392,10 @@ async function deleteAttendance(row, btn) {
   btn.textContent = '⏳';
 
   try {
-    // 1. Xoá DB trước
     const { error: dbErr } = await supabaseClient
       .from('attendance').delete().eq('id', Number(id));
     if (dbErr) throw dbErr;
 
-    // 2. Xoá ảnh sau
     const paths = [];
     const inPath  = extractStoragePath(inPhotoUrl);
     const outPath = extractStoragePath(outPhotoUrl);
@@ -412,16 +491,8 @@ async function deleteAllOnDate(date) {
    HANDLERS
    ========================================================= */
 function initAdminHandlers() {
-  // Tabs
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const name = tab.dataset.tab;
-      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
-      if (name === 'users') loadEmployees();
-      if (name === 'history') loadHistory();
-    });
-  });
+  // Menu dropdown
+  initAdminMenu();
 
   // Date
   $('adminDate').addEventListener('change', loadHistory);
@@ -446,7 +517,7 @@ function initAdminHandlers() {
     loadHistory();
   });
 
-  // Bulk delete — delegation (button render động)
+  // Bulk delete (delegation, button render động)
   document.addEventListener('click', (e) => {
     if (e.target.closest('#btnBulkDelete')) {
       deleteAllOnDate($('adminDate').value);
