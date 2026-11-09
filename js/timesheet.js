@@ -1,5 +1,5 @@
 /* =========================================================
-   TIMESHEET — Bảng công tháng + Complaints
+   TIMESHEET — Bảng công tháng + Complaints (Compact Grid)
    ========================================================= */
 
 let _tsAdminYear  = new Date().getFullYear();
@@ -25,14 +25,14 @@ function _tsDowFull(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()];
 }
-function _tsIsWeekend(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00').getDay();
-  return d === 0 || d === 6;
-}
 function _tsFormatMonth(y, m) { return `${String(m).padStart(2,'0')}/${y}`; }
 function _tsFmtNum(n) {
-  if (n === null || n === undefined) return '–';
+  if (n === null || n === undefined) return '';
   return n % 1 === 0 ? String(n) : Number(n).toFixed(1);
+}
+function _tsNowString() {
+  const now = new Date();
+  return `${formatDateVN(todayISO())} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 }
 
 /* =========================================================
@@ -94,63 +94,66 @@ async function loadAdminTimesheet() {
   }
 }
 
-/* ========== ADMIN — RENDER GRID ========== */
+/* ========== ADMIN — RENDER GRID (COMPACT) ========== */
 function renderAdminTimesheetGrid() {
   const wrap = $('tsAdminGrid');
   const days = _tsDaysInMonth(_tsAdminYear, _tsAdminMonth);
-  const today = todayISO();
-
+  
   let totalWork = 0, totalOT = 0;
   Object.values(_tsAdminData).forEach(d => {
     if (typeof d.work_days === 'number') totalWork += d.work_days;
     if (typeof d.overtime_hours === 'number') totalOT += d.overtime_hours;
   });
 
-  let html = '<div class="ts-scroll"><table class="ts-grid"><thead><tr>';
-  html += '<th class="ts-th-label">Ngày</th>';
+  const today = todayISO();
+  const todayMonth = today.slice(0, 7);
+  const curMonthStr = `${_tsAdminYear}-${String(_tsAdminMonth).padStart(2, '0')}`;
+  const isCurrentMonth = todayMonth === curMonthStr;
+
+  let html = '<div class="ts-compact-wrap">';
+  
+  // Header totals
+  html += `<div class="ts-compact-header">
+    <span>Tổng: <span style="color: var(--primary);">${_tsFmtNum(totalWork)}</span> NC</span>
+    <span>OT: <span style="color: var(--warning);">${_tsFmtNum(totalOT)}</span> giờ</span>
+  </div>`;
+
+  html += '<div class="ts-compact-grid">';
+
   for (let d = 1; d <= days; d++) {
     const ds = _tsDateStr(_tsAdminYear, _tsAdminMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsAdminData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    html += `<th class="ts-th-day${w}${t}${c}"><div>${d}</div><div class="ts-dow">${_tsDow(ds)}</div></th>`;
-  }
-  html += '<th class="ts-th-total">Tổng</th></tr></thead><tbody>';
+    const isSun = _tsDow(ds) === 'CN';
+    const isToday = isCurrentMonth && (d === new Date().getDate());
+    const cellData = _tsAdminData[ds] || {};
+    const hasComplaint = (cellData.complaint_count || 0) > 0;
+    const isSelected = ds === _tsAdminSelected;
 
-  // Row 1 — Ngày công
-  html += '<tr><td class="ts-td-label">Ngày công</td>';
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsAdminYear, _tsAdminMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsAdminData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    const s = ds === _tsAdminSelected ? ' selected' : '';
-    const v = _tsAdminData[ds]?.work_days;
-    const txt = _tsFmtNum(v);
-    const e = (v === null || v === undefined) ? ' empty' : '';
-    html += `<td class="ts-cell${w}${t}${c}${s}" data-date="${ds}"><span class="ts-val${e}">${txt}</span></td>`;
-  }
-  html += `<td class="ts-td-total">${_tsFmtNum(totalWork)}</td></tr>`;
+    const valWork = cellData.work_days;
+    const valOT = cellData.overtime_hours;
 
-  // Row 2 — Tăng ca
-  html += '<tr><td class="ts-td-label">Tăng ca</td>';
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsAdminYear, _tsAdminMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsAdminData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    const s = ds === _tsAdminSelected ? ' selected' : '';
-    const v = _tsAdminData[ds]?.overtime_hours;
-    const txt = _tsFmtNum(v);
-    const e = (v === null || v === undefined) ? ' empty' : '';
-    html += `<td class="ts-cell${w}${t}${c}${s}" data-date="${ds}"><span class="ts-val${e}">${txt}</span></td>`;
-  }
-  html += `<td class="ts-td-total">${_tsFmtNum(totalOT)}</td></tr>`;
+    let txtWork = _tsFmtNum(valWork);
+    if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
+    
+    let txtOT = _tsFmtNum(valOT);
 
-  html += '</tbody></table></div>';
+    const headCls = isSun ? ' sun' : '';
+    const dayCellCls = `ts-day-cell${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+    const otCellCls = `ts-ot-cell${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+
+    html += `<div class="ts-col">`;
+    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
+    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
+    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
+    html += `</div>`;
+  }
+
+  html += '</div>';
+  html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
+  html += '</div>';
+
   wrap.innerHTML = html;
 
-  wrap.querySelectorAll('.ts-cell').forEach(cell => {
+  wrap.querySelectorAll('.ts-day-cell, .ts-ot-cell').forEach(cell => {
     cell.addEventListener('click', () => openAdminTimesheetPanel(cell.dataset.date));
   });
 
@@ -460,57 +463,61 @@ async function loadUserTimesheet() {
 function renderUserTimesheetGrid() {
   const wrap = $('tsUserGrid');
   const days = _tsDaysInMonth(_tsUserYear, _tsUserMonth);
-  const today = todayISO();
-
+  
   let totalWork = 0, totalOT = 0;
   Object.values(_tsUserData).forEach(d => {
     if (typeof d.work_days === 'number') totalWork += d.work_days;
     if (typeof d.overtime_hours === 'number') totalOT += d.overtime_hours;
   });
 
-  let html = '<div class="ts-scroll"><table class="ts-grid"><thead><tr>';
-  html += '<th class="ts-th-label">Ngày</th>';
+  const today = todayISO();
+  const todayMonth = today.slice(0, 7);
+  const curMonthStr = `${_tsUserYear}-${String(_tsUserMonth).padStart(2, '0')}`;
+  const isCurrentMonth = todayMonth === curMonthStr;
+
+  let html = '<div class="ts-compact-wrap">';
+  
+  // Header totals
+  html += `<div class="ts-compact-header">
+    <span>Tổng: <span style="color: var(--primary);">${_tsFmtNum(totalWork)}</span> NC</span>
+    <span>OT: <span style="color: var(--warning);">${_tsFmtNum(totalOT)}</span> giờ</span>
+  </div>`;
+
+  html += '<div class="ts-compact-grid">';
+
   for (let d = 1; d <= days; d++) {
     const ds = _tsDateStr(_tsUserYear, _tsUserMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsUserData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    html += `<th class="ts-th-day${w}${t}${c}"><div>${d}</div><div class="ts-dow">${_tsDow(ds)}</div></th>`;
-  }
-  html += '<th class="ts-th-total">Tổng</th></tr></thead><tbody>';
+    const isSun = _tsDow(ds) === 'CN';
+    const isToday = isCurrentMonth && (d === new Date().getDate());
+    const cellData = _tsUserData[ds] || {};
+    const hasComplaint = (cellData.complaint_count || 0) > 0;
 
-  // Row 1
-  html += '<tr><td class="ts-td-label">Ngày công</td>';
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsUserYear, _tsUserMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsUserData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    const v = _tsUserData[ds]?.work_days;
-    const txt = _tsFmtNum(v);
-    const e = (v === null || v === undefined) ? ' empty' : '';
-    html += `<td class="ts-cell readonly${w}${t}${c}" data-date="${ds}"><span class="ts-val${e}">${txt}</span></td>`;
-  }
-  html += `<td class="ts-td-total">${_tsFmtNum(totalWork)}</td></tr>`;
+    const valWork = cellData.work_days;
+    const valOT = cellData.overtime_hours;
 
-  // Row 2
-  html += '<tr><td class="ts-td-label">Tăng ca</td>';
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsUserYear, _tsUserMonth, d);
-    const w = _tsIsWeekend(ds) ? ' weekend' : '';
-    const t = ds === today ? ' is-today' : '';
-    const c = _tsUserData[ds]?.complaint_count > 0 ? ' has-complaint' : '';
-    const v = _tsUserData[ds]?.overtime_hours;
-    const txt = _tsFmtNum(v);
-    const e = (v === null || v === undefined) ? ' empty' : '';
-    html += `<td class="ts-cell readonly${w}${t}${c}" data-date="${ds}"><span class="ts-val${e}">${txt}</span></td>`;
-  }
-  html += `<td class="ts-td-total">${_tsFmtNum(totalOT)}</td></tr>`;
+    let txtWork = _tsFmtNum(valWork);
+    if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
+    
+    let txtOT = _tsFmtNum(valOT);
 
-  html += '</tbody></table></div>';
+    const headCls = isSun ? ' sun' : '';
+    const dayCellCls = `ts-day-cell readonly${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
+    const otCellCls = `ts-ot-cell readonly${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
+
+    html += `<div class="ts-col">`;
+    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
+    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
+    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
+    html += `</div>`;
+  }
+
+  html += '</div>';
+  html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
+  html += '</div>';
+
   wrap.innerHTML = html;
 
-  wrap.querySelectorAll('.ts-cell.has-complaint').forEach(cell => {
+  wrap.querySelectorAll('.has-complaint').forEach(cell => {
     cell.addEventListener('click', () => openUserComplaintModal(cell.dataset.date));
   });
 
