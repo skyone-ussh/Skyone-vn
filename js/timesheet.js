@@ -1,5 +1,5 @@
 /* =========================================================
-   TIMESHEET — Bảng công tháng + Complaints (Compact Grid)
+   TIMESHEET — Bảng công tháng + Complaints (Split 15 days)
    ========================================================= */
 
 let _tsAdminYear  = new Date().getFullYear();
@@ -33,6 +33,46 @@ function _tsFmtNum(n) {
 function _tsNowString() {
   const now = new Date();
   return `${formatDateVN(todayISO())} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+/* =========================================================
+   RENDER GRID (Dùng chung cho cả Admin & User)
+   ========================================================= */
+function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
+  let html = '<div class="ts-compact-grid">';
+  const year = isAdmin ? _tsAdminYear : _tsUserYear;
+  const month = isAdmin ? _tsAdminMonth : _tsUserMonth;
+  const dataMap = isAdmin ? _tsAdminData : _tsUserData;
+  
+  for (let d = startDay; d <= endDay; d++) {
+    const ds = _tsDateStr(year, month, d);
+    const isSun = _tsDow(ds) === 'CN';
+    const isToday = isCurrentMonth && (d === new Date().getDate());
+    const cellData = dataMap[ds] || {};
+    const hasComplaint = (cellData.complaint_count || 0) > 0;
+    const isSelected = isAdmin && ds === _tsAdminSelected;
+
+    const valWork = cellData.work_days;
+    const valOT = cellData.overtime_hours;
+
+    let txtWork = _tsFmtNum(valWork);
+    if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
+    
+    let txtOT = _tsFmtNum(valOT);
+
+    const headCls = isSun ? ' sun' : '';
+    const readonlyCls = isAdmin ? '' : ' readonly';
+    const dayCellCls = `ts-day-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+    const otCellCls = `ts-ot-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
+
+    html += `<div class="ts-col">`;
+    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
+    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
+    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
+    html += `</div>`;
+  }
+  html += '</div>';
+  return html;
 }
 
 /* =========================================================
@@ -94,7 +134,7 @@ async function loadAdminTimesheet() {
   }
 }
 
-/* ========== ADMIN — RENDER GRID (COMPACT) ========== */
+/* ========== ADMIN — RENDER GRID ========== */
 function renderAdminTimesheetGrid() {
   const wrap = $('tsAdminGrid');
   const days = _tsDaysInMonth(_tsAdminYear, _tsAdminMonth);
@@ -114,40 +154,15 @@ function renderAdminTimesheetGrid() {
   
   // Header totals
   html += `<div class="ts-compact-header">
-    <span>Tổng: <span style="color: var(--primary);">${_tsFmtNum(totalWork)}</span> NC</span>
-    <span>OT: <span style="color: var(--warning);">${_tsFmtNum(totalOT)}</span> giờ</span>
+    <span>Tổng: <span style="color: var(--primary); font-weight: 700;">${_tsFmtNum(totalWork)}</span> NC</span>
+    <span>OT: <span style="color: var(--warning); font-weight: 700;">${_tsFmtNum(totalOT)}</span> giờ</span>
   </div>`;
 
-  html += '<div class="ts-compact-grid">';
+  // Chia làm 2 phần: 1-15 và 16-hết tháng
+  html += _renderTsGridPart(1, 15, true, isCurrentMonth);
+  html += '<div class="ts-split-gap"></div>'; // Đường phân cách
+  html += _renderTsGridPart(16, days, true, isCurrentMonth);
 
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsAdminYear, _tsAdminMonth, d);
-    const isSun = _tsDow(ds) === 'CN';
-    const isToday = isCurrentMonth && (d === new Date().getDate());
-    const cellData = _tsAdminData[ds] || {};
-    const hasComplaint = (cellData.complaint_count || 0) > 0;
-    const isSelected = ds === _tsAdminSelected;
-
-    const valWork = cellData.work_days;
-    const valOT = cellData.overtime_hours;
-
-    let txtWork = _tsFmtNum(valWork);
-    if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
-    
-    let txtOT = _tsFmtNum(valOT);
-
-    const headCls = isSun ? ' sun' : '';
-    const dayCellCls = `ts-day-cell${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
-    const otCellCls = `ts-ot-cell${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
-
-    html += `<div class="ts-col">`;
-    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
-    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
-    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
-    html += `</div>`;
-  }
-
-  html += '</div>';
   html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
   html += '</div>';
 
@@ -479,39 +494,15 @@ function renderUserTimesheetGrid() {
   
   // Header totals
   html += `<div class="ts-compact-header">
-    <span>Tổng: <span style="color: var(--primary);">${_tsFmtNum(totalWork)}</span> NC</span>
-    <span>OT: <span style="color: var(--warning);">${_tsFmtNum(totalOT)}</span> giờ</span>
+    <span>Tổng: <span style="color: var(--primary); font-weight: 700;">${_tsFmtNum(totalWork)}</span> NC</span>
+    <span>OT: <span style="color: var(--warning); font-weight: 700;">${_tsFmtNum(totalOT)}</span> giờ</span>
   </div>`;
 
-  html += '<div class="ts-compact-grid">';
+  // Chia làm 2 phần: 1-15 và 16-hết tháng
+  html += _renderTsGridPart(1, 15, false, isCurrentMonth);
+  html += '<div class="ts-split-gap"></div>'; // Đường phân cách
+  html += _renderTsGridPart(16, days, false, isCurrentMonth);
 
-  for (let d = 1; d <= days; d++) {
-    const ds = _tsDateStr(_tsUserYear, _tsUserMonth, d);
-    const isSun = _tsDow(ds) === 'CN';
-    const isToday = isCurrentMonth && (d === new Date().getDate());
-    const cellData = _tsUserData[ds] || {};
-    const hasComplaint = (cellData.complaint_count || 0) > 0;
-
-    const valWork = cellData.work_days;
-    const valOT = cellData.overtime_hours;
-
-    let txtWork = _tsFmtNum(valWork);
-    if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
-    
-    let txtOT = _tsFmtNum(valOT);
-
-    const headCls = isSun ? ' sun' : '';
-    const dayCellCls = `ts-day-cell readonly${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
-    const otCellCls = `ts-ot-cell readonly${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}`;
-
-    html += `<div class="ts-col">`;
-    html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
-    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
-    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
-    html += `</div>`;
-  }
-
-  html += '</div>';
   html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
   html += '</div>';
 
