@@ -1,5 +1,5 @@
 /* =========================================================
-   TIMESHEET — Bảng công tháng + Complaints (Fixed Jumping)
+   TIMESHEET — Inline Edit & Collapsible Complaints
    ========================================================= */
 
 let _tsAdminYear  = new Date().getFullYear();
@@ -8,7 +8,6 @@ let _tsAdminEmpId = '';
 let _tsAdminData  = {};        // dateStr -> { work_days, overtime_hours, complaint_count }
 let _tsAdminSelected = null;
 let _tsAdminComplaints = [];
-let _tsAdminSaving = false;
 
 let _tsUserYear  = new Date().getFullYear();
 let _tsUserMonth = new Date().getMonth() + 1;
@@ -57,7 +56,6 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
 
     let txtWork = _tsFmtNum(valWork);
     if (isSun && (valWork === null || valWork === undefined || valWork === 0)) txtWork = 'O';
-    
     let txtOT = _tsFmtNum(valOT);
 
     const headCls = isSun ? ' sun' : '';
@@ -65,10 +63,24 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
     const dayCellCls = `ts-day-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valWork === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
     const otCellCls = `ts-ot-cell${readonlyCls}${isSun ? ' sun' : ''}${hasComplaint ? ' has-complaint' : ''}${valOT === null ? ' empty' : ''}${isToday ? ' is-today' : ''}${isSelected ? ' selected' : ''}`;
 
+    // Admin dùng input, User dùng text
+    const dayInner = isAdmin 
+      ? `<input class="ts-cell-input" type="text" inputmode="decimal" autocomplete="off" 
+           value="${valWork !== null ? _tsFmtNum(valWork) : ''}" 
+           placeholder="${isSun ? 'O' : ''}" 
+           data-date="${ds}" data-type="work_days" />`
+      : txtWork;
+
+    const otInner = isAdmin 
+      ? `<input class="ts-cell-input" type="text" inputmode="decimal" autocomplete="off" 
+           value="${valOT !== null ? _tsFmtNum(valOT) : ''}" 
+           data-date="${ds}" data-type="overtime_hours" />`
+      : txtOT;
+
     html += `<div class="ts-col">`;
     html += `<div class="ts-day-head${headCls}${isToday ? ' is-today' : ''}">${d}</div>`;
-    html += `<div class="${dayCellCls}" data-date="${ds}">${txtWork}</div>`;
-    html += `<div class="${otCellCls}" data-date="${ds}">${txtOT}</div>`;
+    html += `<div class="${dayCellCls}" data-date="${ds}">${dayInner}</div>`;
+    html += `<div class="${otCellCls}" data-date="${ds}">${otInner}</div>`;
     html += `</div>`;
   }
   html += '</div>';
@@ -166,8 +178,20 @@ function renderAdminTimesheetGrid() {
 
   wrap.innerHTML = html;
 
-  wrap.querySelectorAll('.ts-day-cell, .ts-ot-cell').forEach(cell => {
-    cell.addEventListener('click', () => openAdminTimesheetPanel(cell.dataset.date));
+  // Bind sự kiện cho các ô input
+  wrap.querySelectorAll('.ts-cell-input').forEach(inp => {
+    // Khi focus vào ô -> cập nhật panel phản ánh bên dưới
+    inp.addEventListener('focus', (e) => {
+      selectAdminDate(e.target.dataset.date);
+    });
+
+    // Khi gõ xong (blur hoặc Enter) -> Lưu
+    inp.addEventListener('change', (e) => {
+      saveAdminCellValue(e.target.dataset.date, e.target.dataset.type, e.target.value);
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    });
   });
 
   const sub = $('tsAdminSubtitle');
@@ -177,38 +201,154 @@ function renderAdminTimesheetGrid() {
   }
 }
 
-/* ========== ADMIN — PANEL (ĐÃ FIX GIẬT TRANG) ========== */
-async function openAdminTimesheetPanel(dateStr) {
-  if (!_tsAdminEmpId) return;
+/* ========== ADMIN — LOGIC LƯU Ô (INLINE EDIT) ========== */
+async function saveAdminCellValue(dateStr, type, rawValue) {
+  if (!_tsAdminEmpId || !dateStr) return;
+
+  const oldVal = _tsAdminData[dateStr]?.[type] ?? null;
   
-  // 1. Cập nhật giao diện chọn ô (Không vẽ lại toàn bộ bảng)
+  // Chuẩn hoá dữ liệu nhập (chấp nhận dấu phẩy)
+  let val = rawValue.trim().replace(',', '.');
+  let num = val === '' ? null : Number(val);
+  if (num !== null && isNaN(num)) num = null;
+
+  // Giới hạn: Ngày công (0-1), OT (>=0). Làm tròn 0.5
+  if (num !== null) {
+    if (num < 0) num = 0;
+    if (type === 'work_days' && num > 1) num = 1;
+    num = Math.round(num * 2) / 2;
+  }
+
+  if (num === oldVal) {
+    // Nếu không đổi giá trị (hoặc chỉ đổi format), reset lại value hiển thị
+    const input = document.querySelector(`.ts-cell-input[data-date="${dateStr}"][data-type="${type}"]`);
+    if (input) input.value = num === null ? '' : _tsFmtNum(num);
+    return;
+  }
+
+  // Cập nhật local
+  if (!_tsAdminData[dateStr]) _tsAdminData[dateStr] = { work_days: null, overtime_hours: null, complaint_count: 0 };
+  _tsAdminData[dateStr][type] = num;
+
+  // Cập nhật UI (không render lại bảng)
+  const input = document.querySelector(`.ts-cell-input[data-date="${dateStr}"][data-type="${type}"]`);
+  if (input) {
+    input.value = num === null ? '' : _tsFmtNum(num);
+    const parentCell = input.closest('.ts-day-cell, .ts-ot-cell');
+    if (parentCell) parentCell.classList.toggle('empty', num === null);
+  }
+  updateAdminTotals();
+
+  // Lưu ngầm xuống DB
+  const wd = _tsAdminData[dateStr].work_days ?? 0;
+  const ot = _tsAdminData[dateStr].overtime_hours ?? 0;
+
+  try {
+    const { error } = await supabaseClient.from('timesheet').upsert({
+      employee_id: _tsAdminEmpId,
+      work_date: dateStr,
+      work_days: wd,
+      overtime_hours: ot,
+      updated_by: currentAdminEmail,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'employee_id,work_date' });
+    if (error) throw error;
+  } catch (err) {
+    console.error('Lưu ô thất bại:', err);
+    showToast('Lỗi lưu: ' + err.message, 'error');
+    // Revert nếu lỗi
+    _tsAdminData[dateStr][type] = oldVal;
+    if (input) {
+      input.value = oldVal === null ? '' : _tsFmtNum(oldVal);
+      const parentCell = input.closest('.ts-day-cell, .ts-ot-cell');
+      if (parentCell) parentCell.classList.toggle('empty', oldVal === null);
+    }
+    updateAdminTotals();
+  }
+}
+
+function updateAdminTotals() {
+  const header = document.querySelector('#tsAdminGrid .ts-compact-header');
+  if (!header) return;
+  let totalWork = 0, totalOT = 0;
+  Object.values(_tsAdminData).forEach(d => {
+    if (typeof d.work_days === 'number') totalWork += d.work_days;
+    if (typeof d.overtime_hours === 'number') totalOT += d.overtime_hours;
+  });
+  const spans = header.querySelectorAll('span');
+  if (spans.length === 2) {
+    spans[0].innerHTML = `Tổng: <span style="color: var(--primary); font-weight: 700;">${_tsFmtNum(totalWork)}</span> NC`;
+    spans[1].innerHTML = `OT: <span style="color: var(--warning); font-weight: 700;">${_tsFmtNum(totalOT)}</span> giờ`;
+  }
+}
+
+/* ========== ADMIN — PANEL PHẢN ÁNH (THU GỌN) ========== */
+async function selectAdminDate(dateStr) {
+  if (_tsAdminSelected === dateStr) return;
+  _tsAdminSelected = dateStr;
+
+  // Highlight cột
   document.querySelectorAll('.ts-day-cell.selected, .ts-ot-cell.selected').forEach(el => el.classList.remove('selected'));
   document.querySelectorAll(`.ts-day-cell[data-date="${dateStr}"], .ts-ot-cell[data-date="${dateStr}"]`).forEach(el => el.classList.add('selected'));
-  
-  _tsAdminSelected = dateStr;
 
   const panel = $('tsAdminPanel');
   if (!panel) return;
 
-  // 2. Tạo khung Panel 1 lần duy nhất (nếu chưa có), giữ cố định chiều cao
+  // Khởi tạo khung Panel nếu chưa có
   if (!panel.querySelector('.ts-panel')) {
     panel.innerHTML = `
       <div class="ts-panel">
-        <div class="ts-panel-header">
-          <div class="ts-panel-title" id="tsPanelTitle"></div>
-          <button class="ts-panel-close" id="tsPanelClose" type="button">✕</button>
+        <div class="ts-panel-header" id="tsPanelToggle" style="cursor:pointer">
+          <div class="ts-panel-title-group">
+            <span class="ts-panel-title" id="tsPanelTitle"></span>
+            <span class="ts-complaints-count zero" id="tsPanelCount">0</span>
+          </div>
+          <div class="ts-panel-header-right">
+            <span class="ts-chevron">▼</span>
+            <button class="ts-panel-close" id="tsPanelClose" type="button">✕</button>
+          </div>
         </div>
-        <div class="ts-panel-body" id="tsPanelBody"></div>
+        <div class="ts-panel-body" id="tsPanelBody" style="display:none">
+          <div id="tsComplaintList"></div>
+          <div class="ts-add-form" id="tsAddForm">
+            <div class="field-row">
+              <div class="field">
+                <label for="tsReporter">Người phản ánh *</label>
+                <input type="text" id="tsReporter" placeholder="Tên người" />
+              </div>
+              <div class="field">
+                <label for="tsArea">Khu vực</label>
+                <input type="text" id="tsArea" placeholder="Khu A, B..." />
+              </div>
+            </div>
+            <div class="field">
+              <label for="tsContent">Nội dung *</label>
+              <textarea id="tsContent" placeholder="Mô tả phản ánh..."></textarea>
+            </div>
+            <button class="ts-add-btn" id="tsAddComplaint" type="button">+ Thêm phản ánh</button>
+          </div>
+        </div>
       </div>
     `;
-    $('tsPanelClose').onclick = closeAdminTimesheetPanel;
+    $('tsPanelToggle').addEventListener('click', (e) => {
+      if (e.target.closest('#tsPanelClose')) return;
+      toggleTsPanel();
+    });
+    $('tsPanelClose').addEventListener('click', closeAdminTimesheetPanel);
+    $('tsAddComplaint').addEventListener('click', addAdminComplaint);
   }
 
+  // Reset form
+  if ($('tsReporter')) $('tsReporter').value = '';
+  if ($('tsArea')) $('tsArea').value = '';
+  if ($('tsContent')) $('tsContent').value = '';
+
+  // Update title
   $('tsPanelTitle').textContent = `${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}`;
-  
-  // 3. Hiện trạng thái loading bên trong Body (không xoá Panel)
-  const body = $('tsPanelBody');
-  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">⏳ Đang tải...</div>';
+
+  // Tải list phản ánh
+  const listEl = $('tsComplaintList');
+  listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);">⏳ Đang tải...</div>';
 
   try {
     const { data, error } = await supabaseClient
@@ -218,86 +358,47 @@ async function openAdminTimesheetPanel(dateStr) {
       .eq('work_date', dateStr)
       .order('created_at', { ascending: true });
     if (error) throw error;
-    
     _tsAdminComplaints = data || [];
-    renderAdminPanelBody();
-    
+    renderAdminComplaintList();
   } catch (err) {
-    console.error('openAdminTimesheetPanel:', err);
-    body.innerHTML = `<p style="color:var(--error);text-align:center;">Lỗi tải phản ánh: ${escapeHtml(err.message)}</p>`;
+    console.error(err);
+    listEl.innerHTML = `<p style="color:var(--error);text-align:center;padding:16px;">Lỗi: ${escapeHtml(err.message)}</p>`;
   }
+}
+
+function toggleTsPanel() {
+  const body = $('tsPanelBody');
+  const header = $('tsPanelToggle');
+  if (!body || !header) return;
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  header.classList.toggle('is-open', isHidden);
 }
 
 function closeAdminTimesheetPanel() {
   _tsAdminSelected = null;
   _tsAdminComplaints = [];
-  
-  // Bỏ chọn trên lưới
   document.querySelectorAll('.ts-day-cell.selected, .ts-ot-cell.selected').forEach(el => el.classList.remove('selected'));
-  
-  // Xoá panel
   const panel = $('tsAdminPanel');
   if (panel) panel.innerHTML = '';
 }
 
-function renderAdminPanelBody() {
-  const body = $('tsPanelBody');
-  if (!body || !_tsAdminSelected) return;
-
-  const dateStr = _tsAdminSelected;
-  const data = _tsAdminData[dateStr] || {};
-  const workDays = data.work_days ?? 0;
-  const ot = data.overtime_hours ?? 0;
-  const complaints = _tsAdminComplaints;
-
-  body.innerHTML = `
-    <div class="ts-inputs">
-      <div class="field">
-        <label for="tsWorkDays">Ngày công (0 – 1)</label>
-        <input type="number" id="tsWorkDays" min="0" max="1" step="0.5" value="${workDays}" />
-      </div>
-      <div class="field">
-        <label for="tsOT">Tăng ca (giờ)</label>
-        <input type="number" id="tsOT" min="0" step="0.5" value="${ot}" />
-      </div>
-    </div>
-    <button class="ts-save-btn" id="tsSaveData" type="button">💾 Lưu số liệu</button>
-    <div class="ts-complaints-header">
-      <div class="ts-complaints-title">Phản ánh</div>
-      <span class="ts-complaints-count${complaints.length === 0 ? ' zero' : ''}">${complaints.length}</span>
-    </div>
-    <div id="tsComplaintList"></div>
-    <div class="ts-add-form">
-      <div class="field-row">
-        <div class="field">
-          <label for="tsReporter">Người phản ánh *</label>
-          <input type="text" id="tsReporter" placeholder="Tên người" />
-        </div>
-        <div class="field">
-          <label for="tsArea">Khu vực</label>
-          <input type="text" id="tsArea" placeholder="Khu A, B..." />
-        </div>
-      </div>
-      <div class="field">
-        <label for="tsContent">Nội dung *</label>
-        <textarea id="tsContent" placeholder="Mô tả phản ánh..."></textarea>
-      </div>
-      <button class="ts-add-btn" id="tsAddComplaint" type="button">+ Thêm phản ánh</button>
-    </div>
-  `;
-  $('tsSaveData').onclick = saveAdminTimesheetData;
-  $('tsAddComplaint').onclick = addAdminComplaint;
-  renderAdminComplaintList();
-}
-
 function renderAdminComplaintList() {
   const listEl = $('tsComplaintList');
+  const countEl = $('tsPanelCount');
   if (!listEl) return;
+  
   const items = _tsAdminComplaints;
+  if (countEl) {
+    countEl.textContent = items.length;
+    countEl.classList.toggle('zero', items.length === 0);
+  }
+
   if (items.length === 0) {
     listEl.innerHTML = '<div class="ts-empty">Chưa có phản ánh</div>';
     return;
   }
+  
   listEl.innerHTML = items.map(c => `
     <div class="ts-complaint-item">
       <div class="ts-complaint-body">
@@ -310,60 +411,10 @@ function renderAdminComplaintList() {
       <button class="ts-complaint-delete" data-id="${c.id}" title="Xoá" type="button">🗑</button>
     </div>
   `).join('');
+  
   listEl.querySelectorAll('.ts-complaint-delete').forEach(btn => {
     btn.onclick = () => deleteAdminComplaint(Number(btn.dataset.id));
   });
-}
-
-async function saveAdminTimesheetData() {
-  if (_tsAdminSaving) return;
-  const btn = $('tsSaveData');
-  const alertEl = $('tsAdminAlert');
-  const wIn = $('tsWorkDays');
-  const oIn = $('tsOT');
-  if (!wIn || !oIn) return;
-
-  let wd = Number(wIn.value) || 0;
-  let ot = Number(oIn.value) || 0;
-  if (wd < 0) wd = 0; if (wd > 1) wd = 1;
-  if (ot < 0) ot = 0;
-  wd = Math.round(wd * 2) / 2;
-  ot = Math.round(ot * 2) / 2;
-  wIn.value = wd; oIn.value = ot;
-
-  _tsAdminSaving = true;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang lưu...'; }
-  hideAlert(alertEl);
-
-  try {
-    const { error } = await supabaseClient.from('timesheet').upsert({
-      employee_id: _tsAdminEmpId,
-      work_date: _tsAdminSelected,
-      work_days: wd,
-      overtime_hours: ot,
-      updated_by: currentAdminEmail,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'employee_id,work_date' });
-    if (error) throw error;
-
-    if (!_tsAdminData[_tsAdminSelected]) _tsAdminData[_tsAdminSelected] = {};
-    _tsAdminData[_tsAdminSelected].work_days = wd;
-    _tsAdminData[_tsAdminSelected].overtime_hours = ot;
-
-    renderAdminTimesheetGrid(); // Cập nhật lại số tổng trên cùng
-    renderAdminPanelBody();     // Cập nhật lại input
-    
-    // Set lại class selected sau khi render grid
-    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
-    
-    showToast('Đã lưu số liệu', 'success');
-  } catch (err) {
-    console.error('saveAdminTimesheetData:', err);
-    showAlert(alertEl, 'Lỗi lưu: ' + (err.message || 'không xác định'), 'error');
-  } finally {
-    _tsAdminSaving = false;
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu số liệu'; }
-  }
 }
 
 async function addAdminComplaint() {
@@ -397,10 +448,19 @@ async function addAdminComplaint() {
     if (!_tsAdminData[_tsAdminSelected]) _tsAdminData[_tsAdminSelected] = {};
     _tsAdminData[_tsAdminSelected].complaint_count = (_tsAdminData[_tsAdminSelected].complaint_count || 0) + 1;
 
-    renderAdminTimesheetGrid();
-    renderAdminPanelBody();
-    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
+    // Cập nhật class has-complaint trên lưới
+    const count = _tsAdminData[_tsAdminSelected].complaint_count;
+    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
+      el.classList.toggle('has-complaint', count > 0);
+    });
+
+    renderAdminComplaintList();
     
+    // Reset form
+    if ($('tsReporter')) $('tsReporter').value = '';
+    if ($('tsArea')) $('tsArea').value = '';
+    if ($('tsContent')) $('tsContent').value = '';
+
     showToast('Đã thêm phản ánh', 'success');
   } catch (err) {
     console.error('addAdminComplaint:', err);
@@ -418,14 +478,15 @@ async function deleteAdminComplaint(id) {
 
     _tsAdminComplaints = _tsAdminComplaints.filter(c => c.id !== id);
     if (_tsAdminData[_tsAdminSelected]) {
-      _tsAdminData[_tsAdminSelected].complaint_count =
-        Math.max(0, (_tsAdminData[_tsAdminSelected].complaint_count || 0) - 1);
+      _tsAdminData[_tsAdminSelected].complaint_count = Math.max(0, (_tsAdminData[_tsAdminSelected].complaint_count || 0) - 1);
     }
     
-    renderAdminTimesheetGrid();
-    renderAdminPanelBody();
-    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
-    
+    const count = _tsAdminData[_tsAdminSelected]?.complaint_count || 0;
+    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
+      el.classList.toggle('has-complaint', count > 0);
+    });
+
+    renderAdminComplaintList();
     showToast('Đã xoá phản ánh', 'success');
   } catch (err) {
     console.error('deleteAdminComplaint:', err);
