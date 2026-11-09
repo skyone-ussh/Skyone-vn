@@ -5,7 +5,7 @@
 let _tsAdminYear  = new Date().getFullYear();
 let _tsAdminMonth = new Date().getMonth() + 1;
 let _tsAdminEmpId = '';
-let _tsAdminData  = {};        // dateStr -> { work_days, overtime_hours, complaint_count }
+let _tsAdminData  = {};        
 let _tsAdminSelected = null;
 let _tsAdminComplaints = [];
 
@@ -43,7 +43,7 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
   const month = isAdmin ? _tsAdminMonth : _tsUserMonth;
   const dataMap = isAdmin ? _tsAdminData : _tsUserData;
   
-  // Header Row (Có data-date để click)
+  // Header Row
   html += '<div class="ts-grid-row">';
   html += '<div class="ts-label-col" style="background:transparent; border:none;"></div>'; 
   for (let d = startDay; d <= endDay; d++) {
@@ -164,7 +164,7 @@ async function loadAdminTimesheet() {
     renderAdminTimesheetGrid();
   } catch (err) {
     console.error('loadAdminTimesheet:', err);
-    wrap.innerHTML = `<p style="text-align:center;padding:40px 20px;color:var(--error);font-size:13px;">Lỗi: ${escapeHtml(err.message || 'không xác định')}</p>`;
+    wrap.innerHTML = `<p style="text-align:center;padding:40px 20px;color:var(--danger);font-size:13px;">Lỗi tải dữ liệu: ${escapeHtml(err.message || 'không xác định')}</p>`;
   }
 }
 
@@ -206,12 +206,10 @@ function renderAdminTimesheetGrid() {
     });
   });
 
-  // 2. Bind sự kiện cho INPUT (chỉ để gõ phím, không mở Sheet)
+  // 2. Bind sự kiện cho INPUT
   wrap.querySelectorAll('.ts-cell-input').forEach(inp => {
     inp.addEventListener('focus', (e) => {
-      e.target.select(); // Auto bôi đen số cũ
-      
-      // Highlight nhẹ header để biết đang nhập ở ngày nào
+      e.target.select();
       const ds = e.target.dataset.date;
       wrap.querySelectorAll('.ts-day-head').forEach(h => h.classList.remove('active-head'));
       wrap.querySelectorAll(`.ts-day-head[data-date="${ds}"]`).forEach(h => h.classList.add('active-head'));
@@ -242,10 +240,8 @@ function handleEnterNavigation(dateStr, type) {
   let nextInput = null;
 
   if (type === 'work_days') {
-    // NC -> OT cùng ngày
     nextInput = document.querySelector(`.ts-cell-input[data-date="${dateStr}"][data-type="overtime_hours"]`);
   } else {
-    // OT -> NC ngày tiếp theo
     d.setDate(d.getDate() + 1);
     const nextDateStr = d.toISOString().slice(0, 10);
     nextInput = document.querySelector(`.ts-cell-input[data-date="${nextDateStr}"][data-type="work_days"]`);
@@ -254,7 +250,6 @@ function handleEnterNavigation(dateStr, type) {
   if (nextInput) {
     nextInput.focus();
   } else {
-    // Nếu hết tháng, đóng bàn phím
     document.activeElement.blur();
   }
 }
@@ -332,7 +327,7 @@ function updateAdminTotals() {
 }
 
 /* =========================================================
-   BOTTOM SHEET LOGIC (Chỉ mở khi click Header Ngày)
+   BOTTOM SHEET LOGIC
    ========================================================= */
 function getBottomSheet() {
   let sheet = $('tsBottomSheet');
@@ -394,7 +389,6 @@ function getBottomSheet() {
     `;
     document.body.appendChild(sheet);
 
-    // Events
     $('bsCloseBtn').onclick = closeBottomSheet;
     $('bsComplaintHeader').onclick = () => {
       $('bsComplaintAcc').classList.toggle('is-open');
@@ -407,7 +401,6 @@ function getBottomSheet() {
         const type = action === 'nc' ? 'work_days' : 'overtime_hours';
         saveAdminCellValue(_tsAdminSelected, type, val);
         
-        // Cập nhật lại input bên dưới bảng
         const input = document.querySelector(`.ts-cell-input[data-date="${_tsAdminSelected}"][data-type="${type}"]`);
         if (input) input.value = val;
         
@@ -425,10 +418,9 @@ async function selectAdminDate(dateStr) {
 
   const sheet = getBottomSheet();
   $('bsDateTitle').textContent = `${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}`;
-  $('bsComplaintAcc').classList.remove('is-open'); // Reset đóng accordion
+  $('bsComplaintAcc').classList.remove('is-open');
   sheet.classList.add('show');
 
-  // Reset form
   if ($('tsReporter')) $('tsReporter').value = '';
   if ($('tsArea')) $('tsArea').value = '';
   if ($('tsContent')) $('tsContent').value = '';
@@ -448,14 +440,14 @@ async function selectAdminDate(dateStr) {
     renderAdminComplaintList();
   } catch (err) {
     console.error(err);
-    listEl.innerHTML = `<p style="color:var(--error);text-align:center;padding:16px;">Lỗi: ${escapeHtml(err.message)}</p>`;
+    listEl.innerHTML = `<p style="color:var(--danger);text-align:center;padding:16px;">Lỗi: ${escapeHtml(err.message)}</p>`;
   }
 }
 
 function closeBottomSheet() {
   const sheet = $('tsBottomSheet');
   if (sheet) sheet.classList.remove('show');
-  document.activeElement?.blur(); // Đóng bàn phím nếu đang mở
+  document.activeElement?.blur();
 }
 
 function renderAdminComplaintList() {
@@ -525,7 +517,6 @@ async function addAdminComplaint() {
 
     const count = _tsAdminData[_tsAdminSelected].complaint_count;
     
-    // Update header (thêm chấm vàng) và cell (đổi màu)
     document.querySelectorAll(`.ts-day-head[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('has-complaint'));
     document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
       el.classList.toggle('has-complaint', count > 0);
@@ -559,7 +550,6 @@ async function deleteAdminComplaint(id) {
     
     const count = _tsAdminData[_tsAdminSelected]?.complaint_count || 0;
     
-    // Update header (xoá chấm vàng nếu hết) và cell
     document.querySelectorAll(`.ts-day-head[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.toggle('has-complaint', count > 0));
     document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => {
       el.classList.toggle('has-complaint', count > 0);
@@ -591,10 +581,20 @@ function populateTimesheetEmployees(employees) {
 async function loadUserTimesheet() {
   const wrap = $('tsUserGrid');
   const alertEl = $('tsUserAlert');
-  if (!wrap || !currentEmployee || !currentEmployeePassword) return;
+  if (!wrap) return;
+
+  if (!currentEmployee) {
+    wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--danger);font-size:13px;">Chưa đăng nhập.</p>';
+    return;
+  }
+  
+  if (!currentEmployeePassword) {
+    wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--danger);font-size:13px;">Phiên đăng nhập không có mật khẩu. Vui lòng đăng xuất và đăng nhập lại.</p>';
+    return;
+  }
 
   hideAlert(alertEl);
-  wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;">⏳ Đang tải...</p>';
+  wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;">⏳ Đang tải dữ liệu...</p>';
 
   try {
     const { data, error } = await supabaseClient.rpc('get_my_month_timesheet', {
@@ -603,8 +603,11 @@ async function loadUserTimesheet() {
       p_year: _tsUserYear,
       p_month: _tsUserMonth,
     });
+    
     if (error) throw error;
-    if (!data) {
+    
+    // Nếu data là null (hiếm khi xảy ra với TABLE)
+    if (data === null) {
       wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;">Phiên đăng nhập hết hạn.</p>';
       return;
     }
@@ -622,7 +625,7 @@ async function loadUserTimesheet() {
     renderUserTimesheetGrid();
   } catch (err) {
     console.error('loadUserTimesheet:', err);
-    wrap.innerHTML = `<p style="text-align:center;padding:40px 20px;color:var(--error);font-size:13px;">Lỗi: ${escapeHtml(err.message || 'không xác định')}</p>`;
+    wrap.innerHTML = `<p style="text-align:center;padding:40px 20px;color:var(--danger);font-size:13px;">Lỗi: ${escapeHtml(err.message || 'không xác định')}</p>`;
   }
 }
 
@@ -715,7 +718,7 @@ async function openUserComplaintModal(dateStr) {
     `).join('');
   } catch (err) {
     console.error('openUserComplaintModal:', err);
-    body.innerHTML = `<div style="color:var(--error);text-align:center;padding:20px;">Lỗi: ${escapeHtml(err.message || 'không xác định')}</div>`;
+    body.innerHTML = `<div style="color:var(--danger);text-align:center;padding:20px;">Lỗi: ${escapeHtml(err.message || 'không xác định')}</div>`;
   }
 }
 
@@ -769,7 +772,6 @@ function initTimesheetHandlers() {
     });
   });
 
-  // Đóng sheet khi click ra ngoài
   document.addEventListener('click', (e) => {
     const sheet = $('tsBottomSheet');
     if (sheet && sheet.classList.contains('show')) {
