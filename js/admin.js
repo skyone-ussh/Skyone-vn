@@ -1,9 +1,10 @@
 /* =========================================================
-   ADMIN — LỊCH SỬ (Ngày/Tháng, Filter NV, Bulk delete) + NHÂN VIÊN
+   ADMIN — LỊCH SỬ (compact list) + NHÂN VIÊN
    ========================================================= */
 
 let _adminMode = 'day';       // 'day' | 'month'
 let _adminFilterEmp = '';     // username hoặc ''
+let _bulkDeleting = false;
 
 async function openAdminScreen(email) {
   currentAdminEmail = email;
@@ -17,102 +18,137 @@ async function openAdminScreen(email) {
 }
 
 /* =========================================================
-   RENDER — LỊCH SỬ (group theo ngày)
+   RENDER — 1 ROW
    ========================================================= */
-function renderHistoryCard(row) {
+function renderAttendanceRow(row) {
   const hasOut = !!row.check_out_time;
-  const inTime  = formatTime(row.check_in_time);
-  const outTime = hasOut ? formatTime(row.check_out_time) : '—';
-  const outClass = hasOut ? 'time-value' : 'time-value muted';
+  const inTime = formatTime(row.check_in_time);
+  const outTime = hasOut ? formatTime(row.check_out_time) : null;
+  const initial = (row.employee_name || '?').charAt(0).toUpperCase();
+
   const statusPill = hasOut
     ? '<span class="pill pill-ok">Đã về</span>'
     : '<span class="pill pill-wait">Đang làm</span>';
 
   const inPhoto = row.check_in_photo_url
-    ? `<div class="photo-caption"><img src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" /><span>Vào</span></div>`
+    ? `<img class="row-photo" src="${escapeHtml(row.check_in_photo_url)}" alt="Vào" data-full="${escapeHtml(row.check_in_photo_url)}" loading="lazy" />`
     : '';
   const outPhoto = row.check_out_photo_url
-    ? `<div class="photo-caption"><img src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" /><span>Ra</span></div>`
+    ? `<img class="row-photo" src="${escapeHtml(row.check_out_photo_url)}" alt="Ra" data-full="${escapeHtml(row.check_out_photo_url)}" loading="lazy" />`
     : '';
+  const photos = (inPhoto || outPhoto) ? `<span class="row-photos">${inPhoto}${outPhoto}</span>` : '';
+
+  const timePart = hasOut
+    ? `<span class="t-in">${inTime}</span><span class="t-arrow">→</span><span class="t-out">${outTime}</span>`
+    : `<span class="t-in">${inTime}</span><span class="t-arrow">→</span><span class="t-missing">Chưa ra</span>`;
 
   return `
-    <article class="data-card" data-record-id="${row.id}">
-      <header class="attendance-head">
-        <div>
-          <h3>${escapeHtml(row.employee_name)}</h3>
-          <code>${escapeHtml(row.employee_id || '')}</code>
-        </div>
-        <div class="head-actions">
+    <article class="attendance-row" data-record-id="${row.id}">
+      <div class="att-avatar">${escapeHtml(initial)}</div>
+      <div class="row-body">
+        <div class="row-top">
+          <span class="row-name">${escapeHtml(row.employee_name)}</span>
           ${statusPill}
-          <button class="btn-icon-sm"
-                  data-action="delete-attendance"
-                  data-id="${row.id}"
-                  data-name="${escapeHtml(row.employee_name)}"
-                  data-date="${escapeHtml(row.work_date || '')}"
-                  title="Xoá bản ghi">🗑</button>
         </div>
-      </header>
-      <div class="attendance-times">
-        <div class="time-block">
-          <span class="time-label">Vào</span>
-          <span class="time-value">${inTime}</span>
-        </div>
-        <div class="time-divider">→</div>
-        <div class="time-block">
-          <span class="time-label">Ra</span>
-          <span class="${outClass}">${outTime}</span>
+        <div class="row-bottom">
+          <span class="row-times">${timePart}</span>
+          <span class="row-sep">·</span>
+          <code class="row-username">${escapeHtml(row.employee_id || '')}</code>
+          ${photos}
         </div>
       </div>
-      ${inPhoto || outPhoto ? `<div class="attendance-photos">${inPhoto}${outPhoto}</div>` : ''}
+      <button class="row-delete"
+              data-action="delete-attendance"
+              data-id="${row.id}"
+              data-name="${escapeHtml(row.employee_name)}"
+              data-date="${escapeHtml(row.work_date || '')}"
+              title="Xoá">🗑</button>
     </article>
   `;
 }
 
+/* =========================================================
+   RENDER — STATS BAR
+   ========================================================= */
+function renderStats(data) {
+  const statsEl = $('historyStats');
+  if (!statsEl) return;
+
+  // Chỉ hiện mode ngày
+  if (_adminMode !== 'day' || !data || data.length === 0) {
+    statsEl.style.display = 'none';
+    statsEl.innerHTML = '';
+    return;
+  }
+
+  const total = data.length;
+  const complete = data.filter(r => r.check_out_time).length;
+  const inProgress = total - complete;
+
+  let chips = `<span class="stat-chip"><span class="dot total"></span>${total} bản ghi</span>`;
+  chips += `<span class="stat-chip"><span class="dot ok"></span>${complete} đã về</span>`;
+  if (inProgress > 0) {
+    chips += `<span class="stat-chip"><span class="dot wait"></span>${inProgress} đang làm</span>`;
+  }
+
+  statsEl.innerHTML = `
+    <div class="stats-chips">${chips}</div>
+    <button class="btn-bulk-delete" id="btnBulkDelete" type="button" title="Xoá tất cả bản ghi ngày này">🗑 Xoá hết</button>
+  `;
+  statsEl.style.display = 'flex';
+}
+
+/* =========================================================
+   RENDER — LỊCH SỬ
+   ========================================================= */
 function renderHistory(data) {
   const list = $('historyList');
-  const bulkBtn = $('btnBulkDelete');
 
   if (!data || data.length === 0) {
     list.innerHTML = `<p class="empty">Không có dữ liệu${_adminMode === 'month' ? ' trong tháng này' : ' cho ngày này'}.</p>`;
-    bulkBtn.style.display = 'none';
+    renderStats(null);
     return;
+  }
+
+  // Subtitle
+  const sub = $('historySubtitle');
+  const dateVal = $('adminDate').value;
+  if (sub) {
+    if (_adminMode === 'day') {
+      sub.textContent = dateVal === todayISO() ? 'Hôm nay' : formatDateVN(dateVal);
+    } else {
+      sub.textContent = 'Tháng ' + dateVal.slice(5, 7) + '/' + dateVal.slice(0, 4);
+    }
   }
 
   // Group by work_date
   const byDate = {};
   data.forEach(row => {
-    const d = row.work_date;
-    if (!byDate[d]) byDate[d] = [];
-    byDate[d].push(row);
+    if (!byDate[row.work_date]) byDate[row.work_date] = [];
+    byDate[row.work_date].push(row);
   });
 
   const dates = Object.keys(byDate).sort().reverse();
   const today = todayISO();
 
+  // Rows
   let html = '';
-  dates.forEach(d => {
-    const isToday = d === today;
-    const headerLabel = isToday ? 'Hôm nay' : formatDateFullVN(d);
-    const count = byDate[d].length;
-
-    html += `<div class="day-group-header${isToday ? ' today' : ''}">`;
-    html += `<span>${escapeHtml(headerLabel)}</span>`;
-    html += `<span class="day-count">${count} bản ghi</span>`;
-    html += `</div>`;
-
-    html += byDate[d].map(row => renderHistoryCard(row)).join('');
-  });
+  if (_adminMode === 'month') {
+    dates.forEach(d => {
+      const isToday = d === today;
+      const label = isToday ? 'Hôm nay · ' + formatDateFullVN(d) : formatDateFullVN(d);
+      html += `<div class="day-separator${isToday ? ' today' : ''}">`;
+      html += `<span>${escapeHtml(label)}</span>`;
+      html += `<span class="day-separator-count">${byDate[d].length}</span>`;
+      html += `</div>`;
+      html += byDate[d].map(r => renderAttendanceRow(r)).join('');
+    });
+  } else {
+    html = data.map(r => renderAttendanceRow(r)).join('');
+  }
 
   list.innerHTML = html;
-
-  // Bulk delete chỉ hiện ở mode Ngày
-  if (_adminMode === 'day' && dates.length === 1) {
-    bulkBtn.style.display = 'block';
-    bulkBtn.textContent = `🗑 Xoá tất cả ${byDate[dates[0]].length} bản ghi ngày này`;
-    bulkBtn.disabled = false;
-  } else {
-    bulkBtn.style.display = 'none';
-  }
+  renderStats(data);
 }
 
 /* =========================================================
@@ -195,7 +231,6 @@ async function loadHistory() {
     if (_adminMode === 'day') {
       query = query.eq('work_date', date);
     } else {
-      // Mode tháng: dùng ngày đang chọn để lấy tháng
       const [y, m] = date.split('-').map(Number);
       const last = new Date(y, m, 0).getDate();
       const start = `${y}-${String(m).padStart(2, '0')}-01`;
@@ -213,18 +248,11 @@ async function loadHistory() {
     if (error) throw error;
 
     renderHistory(data);
-
-    // Update subtitle
-    const sub = $('historySubtitle');
-    if (sub) {
-      if (_adminMode === 'day') sub.textContent = 'Theo ngày ' + formatDateVN(date);
-      else sub.textContent = 'Theo tháng ' + date.slice(5, 7) + '/' + date.slice(0, 4);
-    }
   } catch (err) {
     console.error(err);
     showAlert(alertEl, 'Lỗi tải dữ liệu: ' + (err.message || err), 'error');
     $('historyList').innerHTML = '<p class="empty">Lỗi tải dữ liệu.</p>';
-    $('btnBulkDelete').style.display = 'none';
+    renderStats(null);
   } finally {
     btn.disabled = false;
     btn.textContent = '🔄';
@@ -249,13 +277,12 @@ async function loadEmployees() {
 }
 
 /* =========================================================
-   XOÁ 1 RECORD — fetch tươi DB trước, xoá DB trước ảnh
+   XOÁ 1 RECORD — fetch tươi DB, xoá DB trước ảnh
    ========================================================= */
 async function deleteAttendance(row, btn) {
   const { id, name, date } = row;
   const alertEl = $('alertAdmin');
 
-  // 1. Fetch tươi từ DB (không dùng cache)
   const { data: fresh, error: fetchErr } = await supabaseClient
     .from('attendance').select('*').eq('id', Number(id)).maybeSingle();
 
@@ -273,27 +300,23 @@ async function deleteAttendance(row, btn) {
   const outPhotoUrl = fresh.check_out_photo_url || '';
   const dateStr = date ? formatDateVN(date) : '—';
 
-  const confirmMsg =
+  if (!confirm(
     `Xoá bản ghi chấm công của "${name}"?\n\n` +
     `Ngày: ${dateStr}\n\n` +
-    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\n` +
-    `Không thể hoàn tác.`;
-
-  if (!confirm(confirmMsg)) return;
+    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`
+  )) return;
 
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳';
 
   try {
-    // 2. Xoá DB trước (an toàn hơn)
+    // 1. Xoá DB trước
     const { error: dbErr } = await supabaseClient
-      .from('attendance')
-      .delete()
-      .eq('id', Number(id));
+      .from('attendance').delete().eq('id', Number(id));
     if (dbErr) throw dbErr;
 
-    // 3. Xoá ảnh sau
+    // 2. Xoá ảnh sau
     const paths = [];
     const inPath  = extractStoragePath(inPhotoUrl);
     const outPath = extractStoragePath(outPhotoUrl);
@@ -303,8 +326,7 @@ async function deleteAttendance(row, btn) {
     let storageNote = '';
     if (paths.length > 0) {
       const { error: storageErr } = await supabaseClient.storage
-        .from(PHOTO_BUCKET)
-        .remove(paths);
+        .from(PHOTO_BUCKET).remove(paths);
       if (storageErr) {
         console.warn('Cảnh báo xoá ảnh:', storageErr);
         storageNote = ' (ảnh có thể chưa xoá hết)';
@@ -324,16 +346,15 @@ async function deleteAttendance(row, btn) {
 }
 
 /* =========================================================
-   BULK XOÁ — tất cả bản ghi của 1 ngày
+   BULK XOÁ
    ========================================================= */
 async function deleteAllOnDate(date) {
+  if (_bulkDeleting) return;
   const alertEl = $('alertAdmin');
-  const btn = $('btnBulkDelete');
   hideAlert(alertEl);
 
   if (!date) return;
 
-  // Fetch tươi
   const { data: rows, error: fetchErr } = await supabaseClient
     .from('attendance').select('*').eq('work_date', date);
   if (fetchErr) {
@@ -345,23 +366,18 @@ async function deleteAllOnDate(date) {
     return;
   }
 
-  const confirmMsg =
+  if (!confirm(
     `Xoá TẤT CẢ ${rows.length} bản ghi chấm công ngày ${formatDateVN(date)}?\n\n` +
-    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\n` +
-    `Không thể hoàn tác.`;
-  if (!confirm(confirmMsg)) return;
+    `⚠️ Ảnh chấm công cũng sẽ bị xoá vĩnh viễn.\nKhông thể hoàn tác.`
+  )) return;
 
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '⏳ Đang xoá...';
+  _bulkDeleting = true;
 
   try {
-    // 1. Xoá DB trước
     const { error: dbErr } = await supabaseClient
       .from('attendance').delete().eq('work_date', date);
     if (dbErr) throw dbErr;
 
-    // 2. Xoá ảnh sau
     const paths = [];
     rows.forEach(r => {
       const inPath  = extractStoragePath(r.check_in_photo_url);
@@ -388,8 +404,7 @@ async function deleteAllOnDate(date) {
     console.error('Bulk delete error:', err);
     showAlert(alertEl, 'Lỗi xoá: ' + (err.message || err), 'error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+    _bulkDeleting = false;
   }
 }
 
@@ -431,10 +446,11 @@ function initAdminHandlers() {
     loadHistory();
   });
 
-  // Bulk delete
-  $('btnBulkDelete').addEventListener('click', () => {
-    const date = $('adminDate').value;
-    deleteAllOnDate(date);
+  // Bulk delete — delegation (button render động)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btnBulkDelete')) {
+      deleteAllOnDate($('adminDate').value);
+    }
   });
 
   // Click trong history list
