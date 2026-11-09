@@ -32,9 +32,7 @@ function escapeHtml(s) {
   }[m]));
 }
 
-/* =========================================================
-   WEBP SUPPORT DETECTION (cache 1 lần)
-   ========================================================= */
+/* ============ WEBP DETECTION ============ */
 let _webpSupport = null;
 function supportsWebP() {
   if (_webpSupport !== null) return _webpSupport;
@@ -50,10 +48,63 @@ function supportsWebP() {
 }
 
 /* =========================================================
-   COMPRESS IMAGE — tối ưu: 800px + WebP 0.7
-   → ~40-80KB (thay vì 200-300KB như trước)
+   COMPRESS IMAGE — fast path:
+   - createImageBitmap (decode nhanh hơn Image 2x)
+   - OffscreenCanvas (convert không block main thread)
+   - 600px @ 0.65 → ~25-50KB
+   Fallback: Image + Canvas cũ nếu trình duyệt không hỗ trợ
    ========================================================= */
-async function compressImage(file, maxDim = 800, quality = 0.7) {
+async function compressImage(file, maxDim = 600, quality = 0.65) {
+  const mime = supportsWebP() ? 'image/webp' : 'image/jpeg';
+
+  // ===== FAST PATH: createImageBitmap + OffscreenCanvas =====
+  if (typeof createImageBitmap === 'function') {
+    let bitmap = null;
+    try {
+      bitmap = await createImageBitmap(file);
+
+      let { width, height } = bitmap;
+      if (width > height && width > maxDim) {
+        height = Math.round((height * maxDim) / width);
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = Math.round((width * maxDim) / height);
+        height = maxDim;
+      }
+
+      // OffscreenCanvas (fast, off main thread)
+      if (typeof OffscreenCanvas === 'function') {
+        const off = new OffscreenCanvas(width, height);
+        const ctx = off.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        const blob = await off.convertToBlob({ type: mime, quality });
+        if (blob) return blob;
+      } else {
+        // Regular canvas fallback
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        return await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            b => b ? resolve(b) : reject(new Error('Nén thất bại')),
+            mime,
+            quality
+          );
+        });
+      }
+    } catch (err) {
+      if (bitmap) { try { bitmap.close(); } catch {} }
+      console.warn('Fast compress failed, fallback:', err);
+    }
+  }
+
+  // ===== FALLBACK: Image + Canvas =====
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -74,19 +125,13 @@ async function compressImage(file, maxDim = 800, quality = 0.7) {
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx.imageSmoothingQuality = 'medium'; // nhanh hơn 'high', chất lượng đủ tốt
+      ctx.imageSmoothingQuality = 'medium';
       ctx.drawImage(img, 0, 0, width, height);
 
-      const mimeType = supportsWebP() ? 'image/webp' : 'image/jpeg';
-
       canvas.toBlob(blob => {
-        if (blob) {
-          // blob.type sẽ là mimeType đã dùng
-          resolve(blob);
-        } else {
-          reject(new Error('Không nén được ảnh.'));
-        }
-      }, mimeType, quality);
+        if (blob) resolve(blob);
+        else reject(new Error('Không nén được ảnh.'));
+      }, mime, quality);
     };
 
     img.onerror = () => {
@@ -99,7 +144,7 @@ async function compressImage(file, maxDim = 800, quality = 0.7) {
 }
 
 /* =========================================================
-   UPLOAD PHOTO — cache control 1 năm, giữ định dạng gốc
+   UPLOAD PHOTO
    ========================================================= */
 async function uploadPhoto(blob, username, type) {
   const date = todayISO();
@@ -111,7 +156,7 @@ async function uploadPhoto(blob, username, type) {
     .upload(path, blob, {
       contentType: blob.type || 'image/jpeg',
       upsert: false,
-      cacheControl: '31536000', // 1 năm — CDN cache tốt hơn
+      cacheControl: '31536000',
     });
 
   if (error) throw error;
@@ -124,7 +169,7 @@ async function uploadPhoto(blob, username, type) {
 }
 
 /* =========================================================
-   TRÍCH XUẤT STORAGE PATH TỪ PUBLIC URL
+   EXTRACT STORAGE PATH
    ========================================================= */
 function extractStoragePath(publicUrl) {
   if (!publicUrl) return null;
