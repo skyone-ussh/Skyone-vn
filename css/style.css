@@ -333,7 +333,7 @@ body {
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
 .form-grid .field { margin: 0; }
 
-/* ==================== TIMESHEET (COMPACT) ==================== */
+/* ==================== TIMESHEET (COMPACT & FULL-BLEED) ==================== */
 .ts-month-nav {
   display: inline-flex; align-items: center; gap: 4px;
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
@@ -352,56 +352,63 @@ body {
   color: var(--text); min-width: 80px; text-align: center;
 }
 
-/* Wrapper & Header */
+/* Kéo tràn viền 100% màn hình, bo góc nhẹ phần trên/dưới */
 .ts-compact-wrap {
-  width: 100%;
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  margin-top: 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(15, 61, 92, 0.05);
   overflow: hidden;
-  margin-top: 12px;
 }
+
 .ts-compact-header {
-  padding: 8px 12px;
+  padding: 10px 16px;
   background: #f8fafc;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   display: flex;
   justify-content: space-between;
+  color: var(--text-muted);
 }
+
 .ts-compact-grid {
   display: flex;
   width: 100%;
-  background: #e2e8f0; /* Grid lines */
-  gap: 1px;
+  background: #f1f5f9; /* Màu đường kẻ mảnh, sáng */
+  gap: 1.5px; 
 }
 .ts-col {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px; /* Row lines */
+  gap: 1.5px;
 }
 
 /* Headers & Cells */
 .ts-day-head {
-  background: #0d9488; /* Teal */
+  background: #0d9488;
   color: #fff;
   font-size: clamp(8px, 2.5vw, 11px);
   font-weight: 600;
-  height: 28px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
 }
-.ts-day-head.sun { background: #dc2626; /* Red */ }
+.ts-day-head.sun { background: #e11d48; }
 .ts-day-head.is-today { box-shadow: inset 0 -3px 0 #fff; }
 
+/* Ô mềm mại hơn với nền pastel */
 .ts-day-cell, .ts-ot-cell {
-  background: #fff;
-  height: 32px;
+  background: #ffffff;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -410,31 +417,42 @@ body {
   font-family: 'Be Vietnam Pro', sans-serif;
   cursor: pointer;
   user-select: none;
-  transition: background 0.1s;
+  transition: background 0.15s, transform 0.1s;
 }
-.ts-day-cell { color: #1a2b3c; }
-.ts-day-cell.sun { color: #dc2626; font-weight: 700; }
+.ts-day-cell { color: #1e293b; }
+.ts-day-cell.sun { color: #e11d48; background: #fff1f2; font-weight: 700; }
 .ts-day-cell.empty { color: #cbd5e1; font-weight: 500; }
 
 .ts-ot-cell { background: #fffbeb; color: #b45309; }
-.ts-ot-cell.sun { background: #fff; color: transparent; }
+.ts-ot-cell.sun { background: #fff1f2; color: transparent; }
 .ts-ot-cell.empty { color: #fcd34d; font-weight: 500; }
 
 /* States */
-.ts-day-cell.has-complaint, .ts-ot-cell.has-complaint { background: #fef08a; }
-.ts-day-cell.selected, .ts-ot-cell.selected { background: #bae6fd; }
+.ts-day-cell.has-complaint, .ts-ot-cell.has-complaint { 
+  background: #fef08a; 
+  color: #854d0e; 
+}
+.ts-day-cell.selected, .ts-ot-cell.selected { 
+  background: #bae6fd; 
+  box-shadow: inset 0 0 0 2px #0ea5e9; 
+  z-index: 1;
+}
 .ts-day-cell.is-today, .ts-ot-cell.is-today { box-shadow: inset 0 0 0 2px #0ea5e9; }
 
 .ts-day-cell.readonly, .ts-ot-cell.readonly { cursor: default; }
 .ts-day-cell.readonly.has-complaint, .ts-ot-cell.readonly.has-complaint { cursor: pointer; }
 
+.ts-day-cell:active:not(.readonly), .ts-ot-cell:active:not(.readonly) {
+  background: #e2e8f0;
+}
+
 /* Footer */
 .ts-compact-footer {
-  padding: 8px 12px;
-  font-size: 10px;
+  padding: 10px 16px;
+  font-size: 10.5px;
   color: var(--text-muted);
   text-align: center;
-  background: #fff;
+  background: #f8fafc;
   border-top: 1px solid var(--border);
 }
 
@@ -445,6 +463,7 @@ body {
   border-radius: var(--radius);
   background: #fff;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   animation: tsPanelIn 0.2s ease;
 }
 @keyframes tsPanelIn {
@@ -464,6 +483,7 @@ body {
   border-radius: 6px; color: var(--text-muted);
   cursor: pointer; font-size: 14px; font-family: inherit;
   display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
 }
 .ts-panel-close:hover { background: var(--error-bg); color: var(--error); }
 .ts-panel-body { padding: 14px; }
@@ -475,7 +495,7 @@ body {
   width: 100%; padding: 10px 12px;
   border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   font-size: 15px; font-family: 'SF Mono', monospace; font-weight: 700;
-  text-align: center; background: #FAFBFC;
+  text-align: center; background: #FAFBFC; transition: all 0.15s;
 }
 .ts-inputs .field input:focus {
   outline: none; border-color: var(--primary);
@@ -487,9 +507,9 @@ body {
   background: var(--primary); color: #fff;
   border: none; border-radius: var(--radius-sm);
   cursor: pointer; font-family: inherit;
-  transition: background 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
 }
-.ts-save-btn:hover:not(:disabled) { background: var(--primary-hover); }
+.ts-save-btn:hover:not(:disabled) { background: var(--primary-hover); box-shadow: 0 4px 12px rgba(15,61,92,0.2); }
 .ts-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .ts-complaints-header {
@@ -513,6 +533,7 @@ body {
   margin-bottom: 8px;
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 10px;
+  box-shadow: 0 1px 2px rgba(253, 230, 138, 0.2);
 }
 .ts-complaint-body { flex: 1; min-width: 0; }
 .ts-complaint-meta { font-size: 11.5px; font-weight: 600; color: #92400E; margin-bottom: 4px; }
@@ -524,7 +545,7 @@ body {
   border-radius: 5px; color: #92400E;
   cursor: pointer; font-size: 12px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: inherit;
+  font-family: inherit; transition: all 0.15s;
 }
 .ts-complaint-delete:hover { background: #FEE2E2; color: var(--error); border-color: #FCA5A5; }
 
@@ -544,7 +565,7 @@ body {
 .ts-add-form .field input,
 .ts-add-form .field textarea {
   padding: 8px 10px; font-size: 13px;
-  background: #FAFBFC; resize: vertical;
+  background: #FAFBFC; resize: vertical; transition: all 0.15s;
 }
 .ts-add-form .field textarea { min-height: 60px; }
 .ts-add-form .field-row {
