@@ -1,5 +1,6 @@
 /* =========================================================
-   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA (TỐI ƯU)
+   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA (AUTO SUBMIT)
+   Bấm nút → chụp → tự động gửi, không xác nhận
    ========================================================= */
 
 async function openEmployeeScreen(emp) {
@@ -75,7 +76,7 @@ function updateActionButton() {
   }
 }
 
-/* ========== LOAD (chỉ gọi 1 lần khi mở screen) ========== */
+/* ========== LOAD ========== */
 async function refreshTodayRecord() {
   if (!currentEmployee || !currentEmployeePassword) return;
 
@@ -86,7 +87,6 @@ async function refreshTodayRecord() {
     });
     if (error) throw error;
 
-    // null = password sai / tài khoản bị khoá
     if (!rows) {
       clearEmployeeSession();
       currentEmployee = null;
@@ -108,175 +108,162 @@ async function refreshTodayRecord() {
   }
 }
 
-/* ========== PHOTO MODAL HELPERS ========== */
-function closePhotoModal() {
-  const modal = $('photoModal');
-  modal.classList.remove('show');
-  $('photoLoading').style.display = 'none';
+/* ========== LOADING OVERLAY ========== */
+let loadingCancelled = false;
 
-  const preview = $('photoPreview');
-  if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
-  preview.src = '';
-
-  pendingPhotoBlob = null;
-  pendingPhotoAction = null;
+function showLoading(text, sub) {
+  loadingCancelled = false;
+  $('loadingText').textContent = text || 'Đang xử lý...';
+  $('loadingSub').textContent = sub || 'Vui lòng không tắt trình duyệt';
+  $('loadingOverlay').classList.add('show');
+  $('btnCancelLoading').disabled = false;
+  $('btnCancelLoading').textContent = 'Huỷ';
+}
+function setLoadingText(text, sub) {
+  $('loadingText').textContent = text;
+  if (sub !== undefined) $('loadingSub').textContent = sub;
+}
+function hideLoading() {
+  $('loadingOverlay').classList.remove('show');
 }
 
-function setLoadingState(text) {
-  $('photoLoadingText').textContent = text;
+/* ========== XỬ LÝ ẢNH + GỬI ========== */
+async function processAndSubmit(file, action) {
+  if (!currentEmployee || !currentEmployeePassword) return;
+
+  showLoading(
+    action === 'checkin' ? 'Đang chấm công vào...' : 'Đang chấm công ra...',
+    'Đang xử lý ảnh...'
+  );
+
+  try {
+    // ----- Bước 1: Nén ảnh (rất nhanh, ~300-500ms) -----
+    const blob = await compressImage(file, 800, 0.7);
+
+    if (loadingCancelled) {
+      hideLoading();
+      return;
+    }
+
+    // ----- Bước 2: Upload -----
+    setLoadingText('Đang tải ảnh lên...', 'Vui lòng chờ trong giây lát');
+    const photoUrl = await uploadPhoto(blob, currentEmployee.username, action);
+
+    if (loadingCancelled) {
+      // Ảnh đã upload nhưng user huỷ → orphan file, không nghiêm trọng
+      hideLoading();
+      return;
+    }
+
+    // ----- Bước 3: Gọi RPC lưu record -----
+    setLoadingText('Đang lưu...', 'Sắp xong rồi');
+    const rpcName = action === 'checkin' ? 'employee_checkin' : 'employee_checkout';
+
+    const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, {
+      p_username: currentEmployee.username,
+      p_password: currentEmployeePassword,
+      p_photo_url: photoUrl,
+    });
+    if (rpcErr) throw rpcErr;
+
+    const res = result && result[0];
+    if (!res) throw new Error('Không nhận được phản hồi từ server.');
+
+    // ----- Bước 4: Xử lý kết quả -----
+    if (res.status === 'ok') {
+      // Optimistic UI
+      if (action === 'checkin') {
+        currentTodayRecord = {
+          id: res.record_id,
+          check_in_time: res.check_in_time,
+          check_out_time: null,
+          check_in_photo_url: photoUrl,
+          check_out_photo_url: null,
+        };
+      } else if (currentTodayRecord) {
+        currentTodayRecord.check_out_time = res.check_out_time;
+        currentTodayRecord.check_out_photo_url = photoUrl;
+      }
+
+      hideLoading();
+      updateRecordLine(currentTodayRecord);
+      renderPhotos(currentTodayRecord);
+      updateActionButton();
+
+      const successMsg = action === 'checkin'
+        ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
+        : `✅ Đã chấm công ra lúc ${formatTime(res.check_out_time)}`;
+      showAlert($('empAlert'), successMsg, 'success');
+      return;
+    }
+
+    if (res.status === 'auth_failed') {
+      hideLoading();
+      clearEmployeeSession();
+      currentEmployee = null;
+      showScreen('login');
+      showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
+      return;
+    }
+
+    if (res.status === 'already_in' || res.status === 'already_out') {
+      hideLoading();
+      showAlert($('empAlert'), res.message, 'warning');
+      await refreshTodayRecord();
+      return;
+    }
+
+    if (res.status === 'not_found') {
+      throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
+    }
+
+    throw new Error(res.message || 'Không thể chấm công.');
+  } catch (err) {
+    console.error('Submit error:', err);
+    hideLoading();
+    showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
+    // Cho user thử lại — không reset action button
+    updateActionButton();
+  }
 }
 
 /* ========== HANDLERS ========== */
 function initEmployeeHandlers() {
   const photoInput = $('photoInput');
-  const modal = $('photoModal');
-  const btnRetake = $('btnRetake');
-  const btnConfirm = $('btnConfirmPhoto');
   const btnAction = $('btnAction');
+  const btnCancel = $('btnCancelLoading');
 
-  // Mở camera
+  // Bấm nút → mở camera
   btnAction.addEventListener('click', () => {
     const action = btnAction.dataset.action;
     if (!action) return;
 
     pendingPhotoAction = action;
-    $('photoModalSubtitle').textContent = action === 'checkin'
-      ? 'Ảnh xác nhận vào ca'
-      : 'Ảnh xác nhận ra ca';
-
     hideAlert($('empAlert'));
     photoInput.value = '';
     photoInput.click();
   });
 
-  // Chọn ảnh xong → nén (nhanh, ~500ms) → hiện preview
+  // Chọn/chụp ảnh xong → GỬI LUÔN (không modal xác nhận)
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      const blob = await compressImage(file, 800, 0.7);
-      pendingPhotoBlob = blob;
+    const action = pendingPhotoAction;
+    if (!action) return;
 
-      const url = URL.createObjectURL(blob);
-      $('photoPreview').src = url;
-      modal.classList.add('show');
-    } catch (err) {
-      console.error(err);
-      showAlert($('empAlert'), 'Không xử lý được ảnh: ' + (err.message || err), 'error');
-    }
+    // Reset input để có thể chụp lại nếu cần
+    pendingPhotoAction = null;
+
+    await processAndSubmit(file, action);
   });
 
-  // Chụp lại
-  btnRetake.addEventListener('click', () => {
-    modal.classList.remove('show');
-    pendingPhotoBlob = null;
-    const preview = $('photoPreview');
-    if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
-    preview.src = '';
-    setTimeout(() => photoInput.click(), 100);
-  });
-
-  // Đóng modal khi click nền (chỉ khi không đang loading)
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal && $('photoLoading').style.display === 'none') {
-      closePhotoModal();
-    }
-  });
-
-  // ========== XÁC NHẬN ==========
-  btnConfirm.addEventListener('click', async () => {
-    if (!pendingPhotoBlob || !pendingPhotoAction || !currentEmployee) return;
-
-    // Hiện loading overlay
-    $('photoLoading').style.display = 'flex';
-    btnConfirm.disabled = true;
-    btnRetake.disabled = true;
-
-    try {
-      // ----- Bước 1: Upload ảnh -----
-      setLoadingState('Đang tải ảnh lên...');
-      const photoUrl = await uploadPhoto(
-        pendingPhotoBlob,
-        currentEmployee.username,
-        pendingPhotoAction
-      );
-
-      // ----- Bước 2: Gọi RPC -----
-      setLoadingState('Đang lưu...');
-      const rpcName = pendingPhotoAction === 'checkin'
-        ? 'employee_checkin'
-        : 'employee_checkout';
-
-      const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, {
-        p_username: currentEmployee.username,
-        p_password: currentEmployeePassword,
-        p_photo_url: photoUrl,
-      });
-      if (rpcErr) throw rpcErr;
-
-      const res = result && result[0];
-      if (!res) throw new Error('Không nhận được phản hồi từ server.');
-
-      // ----- Bước 3: Xử lý kết quả -----
-      if (res.status === 'ok') {
-        // OPTIMISTIC UI — không gọi refreshTodayRecord nữa
-        if (pendingPhotoAction === 'checkin') {
-          currentTodayRecord = {
-            id: res.record_id,
-            check_in_time: res.check_in_time,
-            check_out_time: null,
-            check_in_photo_url: photoUrl,
-            check_out_photo_url: null,
-          };
-        } else if (currentTodayRecord) {
-          currentTodayRecord.check_out_time = res.check_out_time;
-          currentTodayRecord.check_out_photo_url = photoUrl;
-        }
-
-        const successMsg = pendingPhotoAction === 'checkin'
-          ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
-          : `✅ Đã chấm công ra lúc ${formatTime(res.check_out_time)}`;
-
-        closePhotoModal();
-
-        // Cập nhật UI ngay từ data RPC trả về (không cần network)
-        updateRecordLine(currentTodayRecord);
-        renderPhotos(currentTodayRecord);
-        updateActionButton();
-        showAlert($('empAlert'), successMsg, 'success');
-        return;
-      }
-
-      // ----- Các status lỗi -----
-      if (res.status === 'auth_failed') {
-        closePhotoModal();
-        clearEmployeeSession();
-        currentEmployee = null;
-        showScreen('login');
-        showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
-        return;
-      }
-
-      if (res.status === 'already_in' || res.status === 'already_out') {
-        closePhotoModal();
-        showAlert($('empAlert'), res.message, 'warning');
-        await refreshTodayRecord();
-        return;
-      }
-
-      if (res.status === 'not_found') {
-        throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
-      }
-
-      throw new Error(res.message || 'Không thể chấm công.');
-    } catch (err) {
-      console.error('Check-in/out error:', err);
-      $('photoLoading').style.display = 'none';
-      btnConfirm.disabled = false;
-      btnRetake.disabled = false;
-      showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
-    }
+  // Nút huỷ loading
+  btnCancel.addEventListener('click', () => {
+    loadingCancelled = true;
+    btnCancel.disabled = true;
+    btnCancel.textContent = 'Đang huỷ...';
+    setLoadingText('Đang huỷ...', 'Vui lòng chờ');
   });
 
   // Xem ảnh full
