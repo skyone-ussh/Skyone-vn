@@ -23,13 +23,12 @@
     <div class="login-brand">
       <div class="brand-mark">USSH</div>
       <h1>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</h1>
-      <p>Hệ thống chấm công nội bộ · Sky One</p>
+      <p>Chấm công nội bộ · Sky One</p>
     </div>
 
     <div class="login-card">
       <h2>Đăng nhập</h2>
       <p class="subtitle">Nhập tên đăng nhập và mật khẩu được cấp</p>
-
       <div id="loginAlert" class="alert"></div>
 
       <form id="loginForm" autocomplete="on">
@@ -43,24 +42,18 @@
           <input type="password" id="loginPassword" placeholder="Mật khẩu"
                  autocomplete="current-password" required />
         </div>
-
         <label class="checkbox">
           <input type="checkbox" id="rememberMe" />
-          <span>
-            Duy trì đăng nhập 7 ngày
-            <small>Chỉ dùng trên máy cá nhân</small>
-          </span>
+          <span>Duy trì đăng nhập 7 ngày<small>Chỉ dùng trên máy cá nhân</small></span>
         </label>
-
         <button type="submit" class="btn btn-primary btn-block" id="btnLogin">Đăng nhập</button>
       </form>
     </div>
-
-    <p class="login-footer">Hỗ trợ kỹ thuật: it@skyone.vn</p>
+    <p class="login-footer">Hỗ trợ: it@skyone.vn</p>
   </div>
 </div>
 
-<!-- ============ EMPLOYEE ============ -->
+<!-- ============ EMPLOYEE — CHẤM CÔNG ============ -->
 <div id="screen-employee" class="screen">
   <header class="app-header">
     <div class="container">
@@ -80,51 +73,34 @@
 
   <main class="app-main">
     <div class="container">
-      <div class="employee-hero">
-        <p class="employee-greeting">Xin chào, <strong id="empGreetingName">—</strong></p>
-        <div class="status-icon waiting" id="statusIcon">⏳</div>
-        <h1 class="status-title" id="statusTitle">Đang kiểm tra vị trí...</h1>
-        <p class="status-desc" id="statusDesc">Vui lòng chờ trong giây lát</p>
-        <small class="last-update" id="lastUpdate"></small>
+
+      <!-- Record line -->
+      <div class="record-card" id="recordCard">
+        <p class="record-label">Chấm công hôm nay</p>
+        <div class="record-line" id="recordLine">
+          <span class="rl-date" id="rlDate">—</span>
+          <span class="rl-sep">·</span>
+          <span class="rl-name" id="rlName">—</span>
+          <span class="rl-sep">·</span>
+          <span class="rl-time" id="rlIn">—</span>
+          <span class="rl-sep">·</span>
+          <span class="rl-time" id="rlOut">—</span>
+        </div>
+        <div class="record-photos" id="recordPhotos"></div>
       </div>
 
-      <div class="card">
-        <div class="info-grid" style="border-top:none;margin-top:0;padding-top:0;">
-          <div class="info-item">
-            <span class="info-label">Nhân viên</span>
-            <span class="info-value" id="infoName">—</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Tên đăng nhập</span>
-            <span class="info-value mono" id="infoUsername">—</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Ngày</span>
-            <span class="info-value" id="infoDate">—</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Giờ vào</span>
-            <span class="info-value highlight" id="infoCheckin">—</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Giờ ra</span>
-            <span class="info-value highlight" id="infoCheckout">—</span>
-          </div>
-          <div class="info-item" id="infoDurationItem" style="display:none;">
-            <span class="info-label">Thời lượng ca</span>
-            <span class="info-value highlight" id="infoDuration">—</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Khoảng cách</span>
-            <span class="info-value" id="infoDistance">—</span>
-          </div>
-        </div>
+      <div id="empAlert" class="alert"></div>
 
-        <div class="actions-row">
-          <button class="btn btn-outline" id="btnRefreshLoc">🔄 Kiểm tra lại vị trí</button>
-          <button class="btn btn-primary" id="btnEmpCheckout" style="display:none;">Check-out</button>
-        </div>
+      <!-- Action button -->
+      <div class="action-wrap">
+        <button class="btn btn-primary btn-large btn-block" id="btnAction" disabled>
+          Đang tải...
+        </button>
       </div>
+
+      <p class="help-text">
+        Bấm nút để mở camera và chụp ảnh xác nhận.
+      </p>
     </div>
   </main>
 </div>
@@ -136,7 +112,7 @@
       <div class="app-brand">
         <div class="brand-mark-sm">USSH</div>
         <div>
-          <strong>Quản trị hệ thống</strong>
+          <strong>Quản trị</strong>
           <small>Sky One</small>
         </div>
       </div>
@@ -149,33 +125,31 @@
 
   <nav class="app-tabs">
     <div class="container">
-      <button class="tab active" data-tab="attendance">Chấm công</button>
+      <button class="tab active" data-tab="history">Chấm công</button>
       <button class="tab" data-tab="users">Nhân viên</button>
-      <button class="tab" data-tab="settings">Cài đặt</button>
     </div>
   </nav>
 
   <main class="app-main">
     <div class="container">
 
-      <!-- TAB CHẤM CÔNG -->
-      <section class="tab-panel active" id="panel-attendance">
+      <!-- TAB LỊCH SỬ CHẤM CÔNG -->
+      <section class="tab-panel active" id="panel-history">
         <div class="card">
           <div class="card-toolbar">
             <div class="card-toolbar-title">
-              <h2>Bảng chấm công</h2>
-              <p class="subtitle">Dữ liệu theo ngày</p>
+              <h2>Lịch sử chấm công</h2>
+              <p class="subtitle">Theo ngày</p>
             </div>
             <div class="toolbar-actions">
               <input type="date" id="adminDate" class="toolbar-date" />
-              <button class="btn btn-icon" id="btnLoadData" title="Tải lại dữ liệu">🔄</button>
+              <button class="btn btn-icon" id="btnReloadHistory" title="Tải lại">🔄</button>
             </div>
           </div>
 
           <div id="alertAdmin" class="alert"></div>
-
-          <div id="adminAttendanceList" class="data-list attendance-list">
-            <p class="empty">Chưa có dữ liệu. Chọn ngày để xem.</p>
+          <div id="historyList" class="data-list">
+            <p class="empty">Chọn ngày để xem lịch sử.</p>
           </div>
         </div>
       </section>
@@ -183,8 +157,8 @@
       <!-- TAB NHÂN VIÊN -->
       <section class="tab-panel" id="panel-users">
         <div class="card">
-          <h2>Thêm nhân viên mới</h2>
-          <p class="subtitle">Tạo tài khoản đăng nhập cho nhân viên vệ sinh.</p>
+          <h2>Thêm nhân viên</h2>
+          <p class="subtitle">Tạo tài khoản chấm công</p>
 
           <div id="alertUsers" class="alert"></div>
 
@@ -211,43 +185,9 @@
 
         <div class="card">
           <h2>Danh sách nhân viên</h2>
-          <p class="subtitle">Quản lý tài khoản, đổi mật khẩu, khoá/mở tài khoản.</p>
-
-          <div id="usersList" class="data-list employee-list">
-            <p class="empty">Chưa có nhân viên nào.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB CÀI ĐẶT -->
-      <section class="tab-panel" id="panel-settings">
-        <div class="card">
-          <h2>Cài đặt vị trí chấm công</h2>
-          <p class="subtitle">Đứng tại vị trí làm việc và bấm nút để đặt làm điểm chấm công.</p>
-
-          <div id="alertSettings" class="alert"></div>
-
-          <div class="location-box" style="margin-bottom:16px;">
-            <div class="row">
-              <span class="label">Vị trí hiện tại đã lưu</span>
-              <span class="value" id="savedLoc">Đang tải...</span>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="field">
-              <label for="radiusInput">Bán kính cho phép (mét)</label>
-              <input type="number" id="radiusInput" min="10" step="10" value="200" />
-            </div>
-            <div class="field" style="display:flex;align-items:flex-end;">
-              <button class="btn btn-primary btn-block-mobile" id="btnSetLocation" style="width:100%;">
-                📍 Đặt vị trí hiện tại
-              </button>
-            </div>
-          </div>
-
-          <div class="alert alert-info show" style="margin-top:8px;">
-            <strong>Ghi chú:</strong> Khi đổi vị trí, nhân viên cần bấm "Kiểm tra lại vị trí" để load vị trí mới. Bán kính khuyến nghị 100–300m.
+          <p class="subtitle">Quản lý tài khoản</p>
+          <div id="usersList" class="data-list">
+            <p class="empty">Đang tải...</p>
           </div>
         </div>
       </section>
@@ -255,6 +195,24 @@
     </div>
   </main>
 </div>
+
+<!-- ============ PHOTO MODAL ============ -->
+<div class="modal-overlay" id="photoModal">
+  <div class="modal photo-modal">
+    <h3>Xác nhận ảnh</h3>
+    <p class="subtitle" id="photoModalSubtitle">Kiểm tra ảnh trước khi gửi</p>
+    <div class="photo-preview-wrap">
+      <img id="photoPreview" alt="Preview" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btnRetake">Chụp lại</button>
+      <button class="btn btn-primary" id="btnConfirmPhoto">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<!-- Input file ẩn — dùng native camera -->
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none" />
 
 </body>
 </html>
