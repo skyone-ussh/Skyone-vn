@@ -268,6 +268,7 @@ body {
 .rl-name { color: var(--text); font-weight: 700; }
 .rl-time { color: var(--success); font-weight: 700; font-family: 'SF Mono', monospace; }
 .rl-time.missing { color: var(--text-muted); font-weight: 500; }
+.rl-time.pending { color: var(--warning); opacity: 0.8; }
 .rl-sep { color: var(--text-muted); opacity: 0.5; font-weight: 400; }
 .record-photos {
   display: flex; gap: 8px; justify-content: center;
@@ -280,6 +281,7 @@ body {
   cursor: pointer; transition: transform 0.15s;
 }
 .record-photos img:hover { transform: scale(1.05); }
+.record-photos img.pending { opacity: 0.6; }
 
 /* ============ EMPLOYEE — ACTION ============ */
 .action-wrap { margin-bottom: 12px; }
@@ -288,60 +290,63 @@ body {
   padding: 0 20px;
 }
 
-/* ============ LOADING OVERLAY (mới) ============ */
-.loading-overlay {
-  position: fixed; inset: 0;
-  background: rgba(15, 61, 92, 0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  display: none;
-  align-items: center; justify-content: center;
-  z-index: 300;
-  padding: 20px;
-}
-.loading-overlay.show { display: flex; }
-
-.loading-box {
-  background: #fff;
-  border-radius: var(--radius-lg);
-  padding: 28px 24px;
-  width: 100%;
-  max-width: 320px;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+/* ============ FLOATING TOAST (thay loading overlay) ============ */
+.floating-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 20px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 250;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  max-width: calc(100vw - 40px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
 }
+.floating-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.floating-toast.success { background: var(--success); }
+.floating-toast.error { background: var(--error); }
 
-.spinner {
-  width: 44px; height: 44px;
-  border: 4px solid var(--border);
-  border-top-color: var(--primary);
+.toast-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
+  display: none;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.floating-toast.syncing .toast-spinner { display: inline-block; }
+
+.toast-icon {
+  display: none;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.floating-toast.success .toast-icon,
+.floating-toast.error .toast-icon { display: inline; }
+
+.toast-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.loading-text {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--primary);
-  line-height: 1.4;
-}
-.loading-sub {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-bottom: 4px;
-}
-#btnCancelLoading {
-  margin-top: 4px;
-  min-width: 100px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ============ DATA LIST (admin) ============ */
