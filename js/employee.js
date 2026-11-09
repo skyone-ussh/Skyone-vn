@@ -1,5 +1,5 @@
 /* =========================================================
-   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA
+   EMPLOYEE — CHẤM CÔNG BẰNG CAMERA (TỐI ƯU)
    ========================================================= */
 
 async function openEmployeeScreen(emp) {
@@ -22,10 +22,7 @@ function updateRecordLine(record) {
   const inEl   = $('rlIn');
   const outEl  = $('rlOut');
 
-  // Ngày
   dateEl.textContent = formatDateVN(todayISO());
-
-  // Tên
   nameEl.textContent = currentEmployee?.display_name || currentEmployee?.username || '—';
 
   if (record) {
@@ -78,7 +75,7 @@ function updateActionButton() {
   }
 }
 
-/* ========== LOAD ========== */
+/* ========== LOAD (chỉ gọi 1 lần khi mở screen) ========== */
 async function refreshTodayRecord() {
   if (!currentEmployee || !currentEmployeePassword) return;
 
@@ -89,7 +86,7 @@ async function refreshTodayRecord() {
     });
     if (error) throw error;
 
-    // null = mật khẩu bị đổi hoặc tài khoản bị khoá
+    // null = password sai / tài khoản bị khoá
     if (!rows) {
       clearEmployeeSession();
       currentEmployee = null;
@@ -111,7 +108,25 @@ async function refreshTodayRecord() {
   }
 }
 
-/* ========== PHOTO FLOW ========== */
+/* ========== PHOTO MODAL HELPERS ========== */
+function closePhotoModal() {
+  const modal = $('photoModal');
+  modal.classList.remove('show');
+  $('photoLoading').style.display = 'none';
+
+  const preview = $('photoPreview');
+  if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
+  preview.src = '';
+
+  pendingPhotoBlob = null;
+  pendingPhotoAction = null;
+}
+
+function setLoadingState(text) {
+  $('photoLoadingText').textContent = text;
+}
+
+/* ========== HANDLERS ========== */
 function initEmployeeHandlers() {
   const photoInput = $('photoInput');
   const modal = $('photoModal');
@@ -119,28 +134,31 @@ function initEmployeeHandlers() {
   const btnConfirm = $('btnConfirmPhoto');
   const btnAction = $('btnAction');
 
-  // Bấm nút → mở camera
+  // Mở camera
   btnAction.addEventListener('click', () => {
     const action = btnAction.dataset.action;
     if (!action) return;
+
     pendingPhotoAction = action;
     $('photoModalSubtitle').textContent = action === 'checkin'
       ? 'Ảnh xác nhận vào ca'
       : 'Ảnh xác nhận ra ca';
+
     hideAlert($('empAlert'));
     photoInput.value = '';
     photoInput.click();
   });
 
-  // Chọn/chụp ảnh xong
+  // Chọn ảnh xong → nén (nhanh, ~500ms) → hiện preview
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const compressed = await compressImage(file, 1200, 0.8);
-      pendingPhotoBlob = compressed;
-      const url = URL.createObjectURL(compressed);
+      const blob = await compressImage(file, 800, 0.7);
+      pendingPhotoBlob = blob;
+
+      const url = URL.createObjectURL(blob);
       $('photoPreview').src = url;
       modal.classList.add('show');
     } catch (err) {
@@ -159,92 +177,105 @@ function initEmployeeHandlers() {
     setTimeout(() => photoInput.click(), 100);
   });
 
-  // Đóng modal khi click nền
+  // Đóng modal khi click nền (chỉ khi không đang loading)
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.remove('show');
-      pendingPhotoBlob = null;
-      const preview = $('photoPreview');
-      if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
-      preview.src = '';
+    if (e.target === modal && $('photoLoading').style.display === 'none') {
+      closePhotoModal();
     }
   });
 
-  // Xác nhận → upload + ghi record
+  // ========== XÁC NHẬN ==========
   btnConfirm.addEventListener('click', async () => {
     if (!pendingPhotoBlob || !pendingPhotoAction || !currentEmployee) return;
 
+    // Hiện loading overlay
+    $('photoLoading').style.display = 'flex';
     btnConfirm.disabled = true;
-    btnConfirm.textContent = 'Đang gửi...';
+    btnRetake.disabled = true;
 
     try {
-      // 1) Upload ảnh
+      // ----- Bước 1: Upload ảnh -----
+      setLoadingState('Đang tải ảnh lên...');
       const photoUrl = await uploadPhoto(
         pendingPhotoBlob,
         currentEmployee.username,
         pendingPhotoAction
       );
 
-      // 2) Gọi RPC
-      let rpcName, rpcParams;
-      if (pendingPhotoAction === 'checkin') {
-        rpcName = 'employee_checkin';
-        rpcParams = {
-          p_username: currentEmployee.username,
-          p_password: currentEmployeePassword,
-          p_photo_url: photoUrl,
-        };
-      } else {
-        rpcName = 'employee_checkout';
-        rpcParams = {
-          p_username: currentEmployee.username,
-          p_password: currentEmployeePassword,
-          p_photo_url: photoUrl,
-        };
-      }
+      // ----- Bước 2: Gọi RPC -----
+      setLoadingState('Đang lưu...');
+      const rpcName = pendingPhotoAction === 'checkin'
+        ? 'employee_checkin'
+        : 'employee_checkout';
 
-      const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, rpcParams);
+      const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, {
+        p_username: currentEmployee.username,
+        p_password: currentEmployeePassword,
+        p_photo_url: photoUrl,
+      });
       if (rpcErr) throw rpcErr;
 
       const res = result && result[0];
       if (!res) throw new Error('Không nhận được phản hồi từ server.');
 
-      // 3) Xử lý kết quả
+      // ----- Bước 3: Xử lý kết quả -----
       if (res.status === 'ok') {
-        modal.classList.remove('show');
-        const preview = $('photoPreview');
-        if (preview.src.startsWith('blob:')) URL.revokeObjectURL(preview.src);
-        preview.src = '';
-        pendingPhotoBlob = null;
+        // OPTIMISTIC UI — không gọi refreshTodayRecord nữa
+        if (pendingPhotoAction === 'checkin') {
+          currentTodayRecord = {
+            id: res.record_id,
+            check_in_time: res.check_in_time,
+            check_out_time: null,
+            check_in_photo_url: photoUrl,
+            check_out_photo_url: null,
+          };
+        } else if (currentTodayRecord) {
+          currentTodayRecord.check_out_time = res.check_out_time;
+          currentTodayRecord.check_out_photo_url = photoUrl;
+        }
 
-        const msg = pendingPhotoAction === 'checkin'
-          ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time || res.check_out_time)}`
+        const successMsg = pendingPhotoAction === 'checkin'
+          ? `✅ Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
           : `✅ Đã chấm công ra lúc ${formatTime(res.check_out_time)}`;
-        showAlert($('empAlert'), msg, 'success');
 
-        await refreshTodayRecord();
-      } else if (res.status === 'auth_failed') {
+        closePhotoModal();
+
+        // Cập nhật UI ngay từ data RPC trả về (không cần network)
+        updateRecordLine(currentTodayRecord);
+        renderPhotos(currentTodayRecord);
+        updateActionButton();
+        showAlert($('empAlert'), successMsg, 'success');
+        return;
+      }
+
+      // ----- Các status lỗi -----
+      if (res.status === 'auth_failed') {
+        closePhotoModal();
         clearEmployeeSession();
         currentEmployee = null;
-        modal.classList.remove('show');
         showScreen('login');
         showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn.', 'warning');
-      } else if (res.status === 'already_in' || res.status === 'already_out') {
-        modal.classList.remove('show');
-        pendingPhotoBlob = null;
+        return;
+      }
+
+      if (res.status === 'already_in' || res.status === 'already_out') {
+        closePhotoModal();
         showAlert($('empAlert'), res.message, 'warning');
         await refreshTodayRecord();
-      } else if (res.status === 'not_found') {
-        throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
-      } else {
-        throw new Error(res.message || 'Không thể chấm công.');
+        return;
       }
+
+      if (res.status === 'not_found') {
+        throw new Error(res.message || 'Không tìm thấy lượt chấm công vào.');
+      }
+
+      throw new Error(res.message || 'Không thể chấm công.');
     } catch (err) {
       console.error('Check-in/out error:', err);
-      showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
-    } finally {
+      $('photoLoading').style.display = 'none';
       btnConfirm.disabled = false;
-      btnConfirm.textContent = 'Xác nhận';
+      btnRetake.disabled = false;
+      showAlert($('empAlert'), 'Lỗi: ' + (err.message || err), 'error');
     }
   });
 
@@ -252,8 +283,7 @@ function initEmployeeHandlers() {
   $('recordPhotos').addEventListener('click', (e) => {
     const img = e.target.closest('img[data-full]');
     if (!img) return;
-    const url = img.dataset.full;
-    if (url) window.open(url, '_blank');
+    if (img.dataset.full) window.open(img.dataset.full, '_blank');
   });
 
   // Logout
