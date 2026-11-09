@@ -57,12 +57,22 @@ function renderPhotos(record) {
   const wrap = $('recordPhotos');
   const photos = [];
   if (record?.check_in_photo_url) {
-    const pending = record._pendingIn ? ' pending' : '';
-    photos.push(`<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào" class="${pending.trim()}" data-full="${escapeHtml(record.check_in_photo_url)}" />`);
+    const cls = record._pendingIn ? ' class="pending"' : '';
+    photos.push(
+      `<figure class="record-photo">` +
+        `<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào"${cls} />` +
+        `<figcaption>Vào</figcaption>` +
+      `</figure>`
+    );
   }
   if (record?.check_out_photo_url) {
-    const pending = record._pendingOut ? ' pending' : '';
-    photos.push(`<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra" class="${pending.trim()}" data-full="${escapeHtml(record.check_out_photo_url)}" />`);
+    const cls = record._pendingOut ? ' class="pending"' : '';
+    photos.push(
+      `<figure class="record-photo">` +
+        `<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra"${cls} />` +
+        `<figcaption>Ra</figcaption>` +
+      `</figure>`
+    );
   }
   wrap.innerHTML = photos.join('');
 }
@@ -300,13 +310,6 @@ function initEmployeeHandlers() {
     pendingPhotoAction = null;
 
     await processAndSubmit(file, action);
-  });
-
-  // Xem ảnh full
-  $('recordPhotos').addEventListener('click', (e) => {
-    const img = e.target.closest('img[data-full]');
-    if (!img) return;
-    if (img.dataset.full) window.open(img.dataset.full, '_blank');
   });
 
   // Logout
