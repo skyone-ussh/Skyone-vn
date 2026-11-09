@@ -1,6 +1,8 @@
 /* =========================================================
-   EMPLOYEE — CHẤM CÔNG (OPTIMISTIC UI)
-   Flow: Chụp → Hiện ảnh + giờ NGAY → Upload + RPC ngầm
+   EMPLOYEE — CHẤM CÔNG
+   - Watermark ảnh (tên + giờ + Vào/Ra)
+   - Optimistic UI
+   - Success modal thay toast
    ========================================================= */
 
 async function openEmployeeScreen(emp) {
@@ -129,6 +131,39 @@ async function refreshTodayRecord() {
   }
 }
 
+/* ========== SUCCESS MODAL ========== */
+let _successModalTimer = null;
+
+function showSuccessModal(type, timeISO) {
+  let modal = $('successModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'successModal';
+    modal.className = 'success-modal';
+    modal.innerHTML = `
+      <div class="success-modal-box">
+        <div class="success-icon">✓</div>
+        <div class="success-title" id="successTitle"></div>
+        <div class="success-time" id="successTime"></div>
+        <div class="success-date" id="successDate"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  const label = type === 'checkin' ? 'VÀO' : 'RA';
+  $('successTitle').textContent = `CHẤM CÔNG ${label} THÀNH CÔNG`;
+  $('successTime').textContent = formatTime(timeISO);
+  $('successDate').textContent = formatDateFullVN(timeISO);
+
+  modal.classList.add('show');
+  if (_successModalTimer) clearTimeout(_successModalTimer);
+  _successModalTimer = setTimeout(() => {
+    modal.classList.remove('show');
+    _successModalTimer = null;
+  }, 3500);
+}
+
 /* ========== FLOATING TOAST ========== */
 let toastTimer = null;
 
@@ -138,7 +173,6 @@ function showToast(text, kind) {
   const icon = $('toastIcon');
   const textEl = $('toastText');
 
-  // kind: 'syncing' | 'success' | 'error'
   el.className = 'floating-toast show ' + (kind || 'syncing');
   textEl.textContent = text;
 
@@ -166,11 +200,10 @@ function hideToast() {
   if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
 }
 
-/* ========== XỬ LÝ CHÍNH (OPTIMISTIC) ========== */
+/* ========== XỬ LÝ CHÍNH ========== */
 async function processAndSubmit(file, action) {
   if (!currentEmployee || !currentEmployeePassword) return;
 
-  // ----- BƯỚC 1: OPTIMISTIC UI NGAY LẬP TỨC -----
   const localUrl = URL.createObjectURL(file);
   const localTime = new Date().toISOString();
   const prevRecord = currentTodayRecord ? { ...currentTodayRecord } : null;
@@ -202,10 +235,15 @@ async function processAndSubmit(file, action) {
     'syncing'
   );
 
-  // ----- BƯỚC 2: UPLOAD + RPC CHẠY NGẦM -----
   try {
-    // Nén ảnh (600px, WebP nếu được)
-    const blob = await compressImage(file, 600, 0.65);
+    // Nén + watermark
+    const blob = await compressImageWithWatermark(file, {
+      maxDim: 600,
+      quality: 0.65,
+      name: currentEmployee.display_name || currentEmployee.username,
+      type: action === 'checkin' ? 'Vào' : 'Ra',
+      timeISO: localTime,
+    });
 
     // Upload
     const photoUrl = await uploadPhoto(blob, currentEmployee.username, action);
@@ -222,7 +260,6 @@ async function processAndSubmit(file, action) {
     const res = result && result[0];
     if (!res) throw new Error('Không nhận được phản hồi từ server.');
 
-    // ----- BƯỚC 3: ĐỒNG BỘ UI VỚI SERVER -----
     if (res.status === 'ok') {
       if (action === 'checkin') {
         currentTodayRecord = {
@@ -244,17 +281,16 @@ async function processAndSubmit(file, action) {
       updateRecordLine(currentTodayRecord);
       renderPhotos(currentTodayRecord);
       updateActionButton();
+      hideToast();
 
-      showToast(
-        action === 'checkin'
-          ? `Đã chấm công vào lúc ${formatTime(res.check_in_time)}`
-          : `Đã chấm công ra lúc ${formatTime(res.check_out_time)}`,
-        'success'
+      // Success modal thay toast
+      showSuccessModal(
+        action,
+        action === 'checkin' ? res.check_in_time : res.check_out_time
       );
       return;
     }
 
-    // Status lỗi từ RPC
     if (res.status === 'auth_failed') {
       URL.revokeObjectURL(localUrl);
       clearEmployeeSession();
@@ -273,7 +309,6 @@ async function processAndSubmit(file, action) {
 
     throw new Error(res.message || 'Không thể chấm công.');
   } catch (err) {
-    // ----- BƯỚC 4: ROLLBACK KHI LỖI -----
     console.error('Submit error:', err);
     URL.revokeObjectURL(localUrl);
     currentTodayRecord = prevRecord;
@@ -289,7 +324,6 @@ function initEmployeeHandlers() {
   const photoInput = $('photoInput');
   const btnAction = $('btnAction');
 
-  // Bấm nút → mở camera
   btnAction.addEventListener('click', () => {
     const action = btnAction.dataset.action;
     if (!action) return;
@@ -300,7 +334,6 @@ function initEmployeeHandlers() {
     photoInput.click();
   });
 
-  // Chụp xong → XỬ LÝ NGAY (không confirm, không loading overlay)
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -312,7 +345,6 @@ function initEmployeeHandlers() {
     await processAndSubmit(file, action);
   });
 
-  // Logout
   $('btnEmpLogout').addEventListener('click', () => {
     clearEmployeeSession();
     currentEmployee = null;
