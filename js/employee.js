@@ -1,8 +1,5 @@
 /* =========================================================
    EMPLOYEE — CHẤM CÔNG
-   - Watermark ảnh (tên + giờ + Vào/Ra)
-   - Optimistic UI
-   - Success modal thay toast
    ========================================================= */
 
 async function openEmployeeScreen(emp) {
@@ -15,10 +12,11 @@ async function openEmployeeScreen(emp) {
   updateRecordLine(null);
   $('recordPhotos').innerHTML = '';
 
+  resetTimesheetUserState();
+
   await refreshTodayRecord();
 }
 
-/* ========== RENDER ========== */
 function updateRecordLine(record) {
   const dateEl = $('rlDate');
   const nameEl = $('rlName');
@@ -35,7 +33,6 @@ function updateRecordLine(record) {
     inEl.textContent = formatTime(record.check_in_time);
     inEl.classList.remove('missing');
     inEl.classList.toggle('pending', isPendingIn);
-
     if (record.check_out_time) {
       outEl.textContent = formatTime(record.check_out_time);
       outEl.classList.remove('missing');
@@ -60,21 +57,11 @@ function renderPhotos(record) {
   const photos = [];
   if (record?.check_in_photo_url) {
     const cls = record._pendingIn ? ' class="pending"' : '';
-    photos.push(
-      `<figure class="record-photo">` +
-        `<img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào"${cls} />` +
-        `<figcaption>Vào</figcaption>` +
-      `</figure>`
-    );
+    photos.push(`<figure class="record-photo"><img src="${escapeHtml(record.check_in_photo_url)}" alt="Vào"${cls} /><figcaption>Vào</figcaption></figure>`);
   }
   if (record?.check_out_photo_url) {
     const cls = record._pendingOut ? ' class="pending"' : '';
-    photos.push(
-      `<figure class="record-photo">` +
-        `<img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra"${cls} />` +
-        `<figcaption>Ra</figcaption>` +
-      `</figure>`
-    );
+    photos.push(`<figure class="record-photo"><img src="${escapeHtml(record.check_out_photo_url)}" alt="Ra"${cls} /><figcaption>Ra</figcaption></figure>`);
   }
   wrap.innerHTML = photos.join('');
 }
@@ -83,9 +70,7 @@ function updateActionButton() {
   const btn = $('btnAction');
   const rec = currentTodayRecord;
   const syncing = !!(rec?._pendingIn || rec?._pendingOut);
-
   btn.disabled = syncing;
-
   if (!rec) {
     btn.textContent = '📸 Chấm công vào';
     btn.dataset.action = 'checkin';
@@ -99,17 +84,14 @@ function updateActionButton() {
   }
 }
 
-/* ========== LOAD ========== */
 async function refreshTodayRecord() {
   if (!currentEmployee || !currentEmployeePassword) return;
-
   try {
     const { data: rows, error } = await supabaseClient.rpc('get_today_attendance', {
       p_username: currentEmployee.username,
       p_password: currentEmployeePassword,
     });
     if (error) throw error;
-
     if (!rows) {
       clearEmployeeSession();
       currentEmployee = null;
@@ -117,7 +99,6 @@ async function refreshTodayRecord() {
       showAlert($('loginAlert'), 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
       return;
     }
-
     currentTodayRecord = rows[0] || null;
     updateRecordLine(currentTodayRecord);
     renderPhotos(currentTodayRecord);
@@ -131,7 +112,6 @@ async function refreshTodayRecord() {
   }
 }
 
-/* ========== SUCCESS MODAL ========== */
 let _successModalTimer = null;
 
 function showSuccessModal(type, timeISO) {
@@ -150,21 +130,15 @@ function showSuccessModal(type, timeISO) {
     `;
     document.body.appendChild(modal);
   }
-
   const label = type === 'checkin' ? 'VÀO' : 'RA';
   $('successTitle').textContent = `CHẤM CÔNG ${label} THÀNH CÔNG`;
   $('successTime').textContent = formatTime(timeISO);
   $('successDate').textContent = formatDateFullVN(timeISO);
-
   modal.classList.add('show');
   if (_successModalTimer) clearTimeout(_successModalTimer);
-  _successModalTimer = setTimeout(() => {
-    modal.classList.remove('show');
-    _successModalTimer = null;
-  }, 3500);
+  _successModalTimer = setTimeout(() => { modal.classList.remove('show'); _successModalTimer = null; }, 3500);
 }
 
-/* ========== FLOATING TOAST ========== */
 let toastTimer = null;
 
 function showToast(text, kind) {
@@ -172,23 +146,15 @@ function showToast(text, kind) {
   const spinner = $('toastSpinner');
   const icon = $('toastIcon');
   const textEl = $('toastText');
-
   el.className = 'floating-toast show ' + (kind || 'syncing');
   textEl.textContent = text;
-
   if (kind === 'success') {
-    icon.textContent = '✅';
-    icon.style.display = 'inline';
-    spinner.style.display = 'none';
+    icon.textContent = '✅'; icon.style.display = 'inline'; spinner.style.display = 'none';
   } else if (kind === 'error') {
-    icon.textContent = '⚠️';
-    icon.style.display = 'inline';
-    spinner.style.display = 'none';
+    icon.textContent = '⚠️'; icon.style.display = 'inline'; spinner.style.display = 'none';
   } else {
-    icon.style.display = 'none';
-    spinner.style.display = 'inline-block';
+    icon.style.display = 'none'; spinner.style.display = 'inline-block';
   }
-
   if (toastTimer) clearTimeout(toastTimer);
   if (kind === 'success' || kind === 'error') {
     toastTimer = setTimeout(() => hideToast(), kind === 'success' ? 2000 : 4000);
@@ -200,7 +166,6 @@ function hideToast() {
   if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
 }
 
-/* ========== XỬ LÝ CHÍNH ========== */
 async function processAndSubmit(file, action) {
   if (!currentEmployee || !currentEmployeePassword) return;
 
@@ -210,45 +175,28 @@ async function processAndSubmit(file, action) {
 
   if (action === 'checkin') {
     currentTodayRecord = {
-      id: 'pending',
-      check_in_time: localTime,
-      check_out_time: null,
-      check_in_photo_url: localUrl,
-      check_out_photo_url: null,
-      _pendingIn: true,
-      _localUrl: localUrl,
+      id: 'pending', check_in_time: localTime, check_out_time: null,
+      check_in_photo_url: localUrl, check_out_photo_url: null,
+      _pendingIn: true, _localUrl: localUrl,
     };
   } else {
-    currentTodayRecord = {
-      ...currentTodayRecord,
-      check_out_time: localTime,
-      check_out_photo_url: localUrl,
-      _pendingOut: true,
-    };
+    currentTodayRecord = { ...currentTodayRecord, check_out_time: localTime, check_out_photo_url: localUrl, _pendingOut: true };
   }
 
   updateRecordLine(currentTodayRecord);
   renderPhotos(currentTodayRecord);
   updateActionButton();
-  showToast(
-    action === 'checkin' ? 'Đang đồng bộ chấm công vào...' : 'Đang đồng bộ chấm công ra...',
-    'syncing'
-  );
+  showToast(action === 'checkin' ? 'Đang đồng bộ chấm công vào...' : 'Đang đồng bộ chấm công ra...', 'syncing');
 
   try {
-    // Nén + watermark
     const blob = await compressImageWithWatermark(file, {
-      maxDim: 600,
-      quality: 0.65,
+      maxDim: 600, quality: 0.65,
       name: currentEmployee.display_name || currentEmployee.username,
       type: action === 'checkin' ? 'Vào' : 'Ra',
       timeISO: localTime,
     });
 
-    // Upload
     const photoUrl = await uploadPhoto(blob, currentEmployee.username, action);
-
-    // RPC
     const rpcName = action === 'checkin' ? 'employee_checkin' : 'employee_checkout';
     const { data: result, error: rpcErr } = await supabaseClient.rpc(rpcName, {
       p_username: currentEmployee.username,
@@ -263,11 +211,8 @@ async function processAndSubmit(file, action) {
     if (res.status === 'ok') {
       if (action === 'checkin') {
         currentTodayRecord = {
-          id: res.record_id,
-          check_in_time: res.check_in_time,
-          check_out_time: null,
-          check_in_photo_url: photoUrl,
-          check_out_photo_url: null,
+          id: res.record_id, check_in_time: res.check_in_time, check_out_time: null,
+          check_in_photo_url: photoUrl, check_out_photo_url: null,
         };
       } else {
         currentTodayRecord.check_out_time = res.check_out_time;
@@ -282,12 +227,7 @@ async function processAndSubmit(file, action) {
       renderPhotos(currentTodayRecord);
       updateActionButton();
       hideToast();
-
-      // Success modal thay toast
-      showSuccessModal(
-        action,
-        action === 'checkin' ? res.check_in_time : res.check_out_time
-      );
+      showSuccessModal(action, action === 'checkin' ? res.check_in_time : res.check_out_time);
       return;
     }
 
@@ -319,7 +259,6 @@ async function processAndSubmit(file, action) {
   }
 }
 
-/* ========== HANDLERS ========== */
 function initEmployeeHandlers() {
   const photoInput = $('photoInput');
   const btnAction = $('btnAction');
@@ -327,7 +266,6 @@ function initEmployeeHandlers() {
   btnAction.addEventListener('click', () => {
     const action = btnAction.dataset.action;
     if (!action) return;
-
     pendingPhotoAction = action;
     hideAlert($('empAlert'));
     photoInput.value = '';
@@ -337,11 +275,9 @@ function initEmployeeHandlers() {
   photoInput.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const action = pendingPhotoAction;
     if (!action) return;
     pendingPhotoAction = null;
-
     await processAndSubmit(file, action);
   });
 
