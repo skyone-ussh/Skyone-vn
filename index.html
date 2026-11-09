@@ -15,12 +15,13 @@
   <script defer src="js/utils.js"></script>
   <script defer src="js/auth.js"></script>
   <script defer src="js/employee.js"></script>
+  <script defer src="js/timesheet.js"></script>
   <script defer src="js/admin.js"></script>
   <script defer src="js/app.js"></script>
 </head>
 <body>
 
-<!-- ============ BOOT / SPLASH ============ -->
+<!-- ============ BOOT ============ -->
 <div id="screen-boot" class="screen active">
   <div class="boot-wrapper">
     <div class="boot-mark">USSH</div>
@@ -36,22 +37,18 @@
       <h1>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</h1>
       <p>Chấm công nội bộ · Sky One</p>
     </div>
-
     <div class="login-card">
       <h2>Đăng nhập</h2>
       <p class="subtitle">Nhập tên đăng nhập và mật khẩu được cấp</p>
       <div id="loginAlert" class="alert"></div>
-
       <form id="loginForm" autocomplete="on">
         <div class="field">
           <label for="loginUsername">Tên đăng nhập</label>
-          <input type="text" id="loginUsername" placeholder="Tên đăng nhập"
-                 autocapitalize="none" spellcheck="false" autocomplete="username" required />
+          <input type="text" id="loginUsername" placeholder="Tên đăng nhập" autocapitalize="none" spellcheck="false" autocomplete="username" required />
         </div>
         <div class="field">
           <label for="loginPassword">Mật khẩu</label>
-          <input type="password" id="loginPassword" placeholder="Mật khẩu"
-                 autocomplete="current-password" required />
+          <input type="password" id="loginPassword" placeholder="Mật khẩu" autocomplete="current-password" required />
         </div>
         <label class="checkbox">
           <input type="checkbox" id="rememberMe" />
@@ -64,16 +61,13 @@
   </div>
 </div>
 
-<!-- ============ EMPLOYEE — CHẤM CÔNG ============ -->
+<!-- ============ EMPLOYEE ============ -->
 <div id="screen-employee" class="screen">
   <header class="app-header">
     <div class="container">
       <div class="app-brand">
         <div class="brand-mark-sm">USSH</div>
-        <div>
-          <strong>Chấm công</strong>
-          <small>Sky One</small>
-        </div>
+        <div><strong>Nhân viên</strong><small>Sky One</small></div>
       </div>
       <div class="app-user">
         <span id="empHeaderName">—</span>
@@ -82,34 +76,59 @@
     </div>
   </header>
 
+  <nav class="emp-tabs">
+    <div class="container">
+      <button class="emp-tab active" data-emp-tab="checkin" type="button">Chấm công</button>
+      <button class="emp-tab" data-emp-tab="timesheet" type="button">Bảng công</button>
+    </div>
+  </nav>
+
   <main class="app-main">
     <div class="container">
 
-      <div class="record-card" id="recordCard">
-        <p class="record-label">Chấm công hôm nay</p>
-        <div class="record-line" id="recordLine">
-          <span class="rl-date" id="rlDate">—</span>
-          <span class="rl-sep">·</span>
-          <span class="rl-name" id="rlName">—</span>
-          <span class="rl-sep">·</span>
-          <span class="rl-time" id="rlIn">—</span>
-          <span class="rl-sep">·</span>
-          <span class="rl-time" id="rlOut">—</span>
+      <!-- Panel Chấm công -->
+      <div class="emp-tab-panel active" id="emp-panel-checkin">
+        <div class="record-card" id="recordCard">
+          <p class="record-label">Chấm công hôm nay</p>
+          <div class="record-line" id="recordLine">
+            <span class="rl-date" id="rlDate">—</span>
+            <span class="rl-sep">·</span>
+            <span class="rl-name" id="rlName">—</span>
+            <span class="rl-sep">·</span>
+            <span class="rl-time" id="rlIn">—</span>
+            <span class="rl-sep">·</span>
+            <span class="rl-time" id="rlOut">—</span>
+          </div>
+          <div class="record-photos" id="recordPhotos"></div>
         </div>
-        <div class="record-photos" id="recordPhotos"></div>
+        <div id="empAlert" class="alert"></div>
+        <div class="action-wrap">
+          <button class="btn btn-primary btn-large btn-block" id="btnAction" disabled>Đang tải...</button>
+        </div>
+        <p class="help-text">Bấm nút để mở camera. Ảnh sẽ được gửi ngay sau khi chụp.</p>
       </div>
 
-      <div id="empAlert" class="alert"></div>
-
-      <div class="action-wrap">
-        <button class="btn btn-primary btn-large btn-block" id="btnAction" disabled>
-          Đang tải...
-        </button>
+      <!-- Panel Bảng công -->
+      <div class="emp-tab-panel" id="emp-panel-timesheet">
+        <div class="record-card" style="text-align:left;">
+          <div class="history-header">
+            <div class="history-title">
+              <h2>Bảng công</h2>
+              <p class="subtitle" id="tsUserSubtitle">Tháng này</p>
+            </div>
+          </div>
+          <div class="history-filters" style="justify-content:center;">
+            <div class="ts-month-nav">
+              <button class="btn-icon-compact" id="tsUserPrevMonth" type="button">◀</button>
+              <span id="tsUserMonthLabel">--/----</span>
+              <button class="btn-icon-compact" id="tsUserNextMonth" type="button">▶</button>
+            </div>
+          </div>
+          <div id="tsUserAlert" class="alert"></div>
+          <div id="tsUserGrid"></div>
+        </div>
       </div>
 
-      <p class="help-text">
-        Bấm nút để mở camera. Ảnh sẽ được gửi ngay sau khi chụp.
-      </p>
     </div>
   </main>
 </div>
@@ -126,12 +145,13 @@
         </button>
         <div class="app-menu-dropdown" id="appMenuDropdown" role="menu">
           <button class="app-menu-item active" type="button" data-tab="history" role="menuitem">
-            <span class="menu-icon">📋</span>
-            <span>Chấm công</span>
+            <span class="menu-icon">📋</span><span>Chấm công</span>
+          </button>
+          <button class="app-menu-item" type="button" data-tab="timesheet" role="menuitem">
+            <span class="menu-icon">📊</span><span>Bảng công</span>
           </button>
           <button class="app-menu-item" type="button" data-tab="users" role="menuitem">
-            <span class="menu-icon">👥</span>
-            <span>Nhân viên</span>
+            <span class="menu-icon">👥</span><span>Nhân viên</span>
           </button>
         </div>
       </div>
@@ -145,6 +165,7 @@
   <main class="app-main">
     <div class="container">
 
+      <!-- Panel Chấm công -->
       <section class="tab-panel active" id="panel-history">
         <div class="card">
           <div class="history-header">
@@ -157,7 +178,6 @@
               <button type="button" class="mode-btn" data-mode="month">Tháng</button>
             </div>
           </div>
-
           <div class="history-filters">
             <input type="date" id="adminDate" class="input-compact" />
             <select id="adminFilterEmp" class="input-compact select-flex">
@@ -165,24 +185,45 @@
             </select>
             <button class="btn btn-icon btn-icon-compact" id="btnReloadHistory" title="Tải lại">🔄</button>
           </div>
-
           <div class="stats-bar" id="historyStats" style="display:none;"></div>
-
           <div id="alertAdmin" class="alert"></div>
-
           <div id="historyList" class="attendance-list">
             <p class="empty">Chọn ngày để xem lịch sử.</p>
           </div>
         </div>
       </section>
 
+      <!-- Panel Bảng công -->
+      <section class="tab-panel" id="panel-timesheet">
+        <div class="card">
+          <div class="history-header">
+            <div class="history-title">
+              <h2>Bảng công</h2>
+              <p class="subtitle" id="tsAdminSubtitle">Chọn nhân viên và tháng</p>
+            </div>
+          </div>
+          <div class="history-filters">
+            <select id="tsAdminEmployee" class="input-compact select-flex">
+              <option value="">👤 Chọn nhân viên</option>
+            </select>
+            <div class="ts-month-nav">
+              <button class="btn-icon-compact" id="tsAdminPrevMonth" type="button">◀</button>
+              <span id="tsAdminMonthLabel">--/----</span>
+              <button class="btn-icon-compact" id="tsAdminNextMonth" type="button">▶</button>
+            </div>
+          </div>
+          <div id="tsAdminAlert" class="alert"></div>
+          <div id="tsAdminGrid"></div>
+          <div id="tsAdminPanel"></div>
+        </div>
+      </section>
+
+      <!-- Panel Nhân viên -->
       <section class="tab-panel" id="panel-users">
         <div class="card">
           <h2>Thêm nhân viên</h2>
           <p class="subtitle">Tạo tài khoản chấm công</p>
-
           <div id="alertUsers" class="alert"></div>
-
           <div class="form-grid">
             <div class="field">
               <label for="newUsername">Tên đăng nhập *</label>
@@ -203,7 +244,6 @@
           </div>
           <button class="btn btn-primary btn-block-mobile" id="btnAddEmployee">+ Thêm nhân viên</button>
         </div>
-
         <div class="card">
           <h2>Danh sách nhân viên</h2>
           <p class="subtitle">Quản lý tài khoản</p>
@@ -217,7 +257,7 @@
   </main>
 </div>
 
-<!-- ============ FLOATING TOAST ============ -->
+<!-- ============ TOAST ============ -->
 <div class="floating-toast" id="floatingToast">
   <span class="toast-spinner" id="toastSpinner"></span>
   <span class="toast-icon" id="toastIcon"></span>
