@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>TRƯỜNG ĐẠI HỌC XÃ HỘI VÀ NHÂN VĂN</title>
 
-  <!-- Preconnect tới Supabase (giảm 200-400ms lần đầu) -->
   <link rel="preconnect" href="https://wosgbrafpbigmbhhodov.supabase.co" crossorigin />
   <link rel="dns-prefetch" href="https://wosgbrafpbigmbhhodov.supabase.co" />
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
@@ -102,7 +100,7 @@
       </div>
 
       <p class="help-text">
-        Bấm nút để mở camera và chụp ảnh xác nhận.
+        Bấm nút để mở camera. Ảnh sẽ được gửi ngay sau khi chụp.
       </p>
     </div>
   </main>
@@ -197,25 +195,13 @@
   </main>
 </div>
 
-<!-- ============ PHOTO MODAL ============ -->
-<div class="modal-overlay" id="photoModal">
-  <div class="modal photo-modal">
-
-    <!-- Loading overlay -->
-    <div class="photo-loading" id="photoLoading" style="display:none;">
-      <div class="spinner"></div>
-      <p id="photoLoadingText">Đang xử lý...</p>
-    </div>
-
-    <h3>Xác nhận ảnh</h3>
-    <p class="subtitle" id="photoModalSubtitle">Kiểm tra ảnh trước khi gửi</p>
-    <div class="photo-preview-wrap">
-      <img id="photoPreview" alt="Preview" />
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" id="btnRetake">Chụp lại</button>
-      <button class="btn btn-primary" id="btnConfirmPhoto">Xác nhận</button>
-    </div>
+<!-- ============ LOADING OVERLAY (thay modal cũ) ============ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p class="loading-text" id="loadingText">Đang xử lý...</p>
+    <p class="loading-sub" id="loadingSub">Vui lòng không tắt trình duyệt</p>
+    <button class="btn btn-outline btn-sm" id="btnCancelLoading">Huỷ</button>
   </div>
 </div>
 
