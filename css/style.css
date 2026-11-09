@@ -228,7 +228,7 @@ body {
 /* ============ CARD TOOLBAR ============ */
 .card-toolbar {
   display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
 }
 .card-toolbar-title { min-width: 0; flex: 1 1 150px; }
 .card-toolbar-title h2 {
@@ -244,6 +244,39 @@ body {
 .toolbar-date:focus {
   outline: none; border-color: var(--primary-light); background: #fff;
   box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
+}
+
+/* ============ ADMIN FILTERS ============ */
+.admin-filters {
+  display: flex; gap: 8px; margin-bottom: 16px;
+  flex-wrap: wrap; align-items: stretch;
+}
+.toolbar-select {
+  flex: 1 1 180px; min-width: 0;
+  padding: 0 12px; height: 38px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; font-family: inherit;
+  background: #FAFBFC; color: var(--text); cursor: pointer;
+}
+.toolbar-select:focus {
+  outline: none; border-color: var(--primary-light); background: #fff;
+  box-shadow: 0 0 0 3px rgba(30,90,127,0.1);
+}
+.mode-toggle {
+  display: flex; gap: 0; flex-shrink: 0;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; height: 38px;
+}
+.mode-btn {
+  padding: 0 14px; font-size: 13px; font-weight: 600;
+  background: #FAFBFC; color: var(--text-muted);
+  border: none; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; white-space: nowrap;
+}
+.mode-btn + .mode-btn { border-left: 1.5px solid var(--border); }
+.mode-btn:hover:not(.active) { background: #F0F6FC; color: var(--primary); }
+.mode-btn.active {
+  background: var(--primary); color: #fff;
 }
 
 /* ============ EMPLOYEE — RECORD CARD ============ */
@@ -270,18 +303,27 @@ body {
 .rl-time.missing { color: var(--text-muted); font-weight: 500; }
 .rl-time.pending { color: var(--warning); opacity: 0.8; }
 .rl-sep { color: var(--text-muted); opacity: 0.5; font-weight: 400; }
+
+/* Record photos — xem tại chỗ, không click mở full */
 .record-photos {
-  display: flex; gap: 8px; justify-content: center;
+  display: flex; gap: 10px; justify-content: center;
   flex-wrap: wrap; margin-top: 14px;
 }
 .record-photos:empty { display: none; }
-.record-photos img {
-  width: 64px; height: 64px; object-fit: cover;
-  border-radius: 8px; border: 1px solid var(--border);
-  cursor: pointer; transition: transform 0.15s;
+.record-photo {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  margin: 0;
 }
-.record-photos img:hover { transform: scale(1.05); }
-.record-photos img.pending { opacity: 0.6; }
+.record-photo img {
+  width: 120px; aspect-ratio: 4 / 3; height: auto;
+  object-fit: cover; border-radius: 8px;
+  border: 1px solid var(--border); display: block;
+}
+.record-photo img.pending { opacity: 0.6; }
+.record-photo figcaption {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
 
 /* ============ EMPLOYEE — ACTION ============ */
 .action-wrap { margin-bottom: 12px; }
@@ -290,7 +332,7 @@ body {
   padding: 0 20px;
 }
 
-/* ============ FLOATING TOAST (thay loading overlay) ============ */
+/* ============ FLOATING TOAST ============ */
 .floating-toast {
   position: fixed;
   bottom: 20px;
@@ -349,6 +391,50 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ============ SUCCESS MODAL ============ */
+.success-modal {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10002;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.success-modal.show { display: flex; }
+.success-modal-box {
+  background: #fff;
+  border-radius: 20px;
+  max-width: 360px; width: 100%;
+  padding: 44px 24px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: successPop 0.3s ease;
+}
+@keyframes successPop {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.success-icon {
+  font-size: 88px; color: var(--success);
+  line-height: 1; margin-bottom: 20px;
+  font-weight: 700;
+}
+.success-title {
+  font-size: 20px; font-weight: 700;
+  color: var(--success); margin-bottom: 16px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+.success-time {
+  font-size: 26px; font-weight: 700;
+  color: var(--text); margin-bottom: 6px;
+  font-family: 'SF Mono', monospace;
+  letter-spacing: 0.5px;
+}
+.success-date {
+  font-size: 14px; color: var(--text-muted);
+}
+
 /* ============ DATA LIST (admin) ============ */
 .data-list {
   display: grid;
@@ -360,6 +446,35 @@ body {
   grid-column: 1 / -1; text-align: center; padding: 40px 20px;
   color: var(--text-muted); font-size: 13px;
 }
+
+/* Header ngày (chèn vào grid, chiếm cả hàng) */
+.day-group-header {
+  grid-column: 1 / -1;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; margin-top: 4px;
+  background: #F1F5F9; border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+.day-group-header:first-child { margin-top: 0; }
+.day-group-header.today {
+  background: linear-gradient(135deg, #DCFCE7, #BBF7D0);
+  border-color: #86EFAC;
+  color: var(--success);
+}
+.day-group-header .day-count {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px; border-radius: 999px;
+}
+.day-group-header.today .day-count {
+  color: var(--success);
+  background: rgba(255, 255, 255, 0.85);
+}
+
 .data-card {
   background: #fff; border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px;
@@ -480,7 +595,8 @@ body {
   .brand-mark-sm { width: 40px; height: 40px; font-size: 13px; }
   .record-card { padding: 24px; }
   .record-line { font-size: 15px; }
-  .record-photos img { width: 72px; height: 72px; }
+  .record-photo img { width: 140px; }
+  .mode-btn { padding: 0 18px; font-size: 13.5px; }
 }
 @media (max-width: 400px) {
   .toolbar-actions { width: 100%; }
@@ -488,4 +604,8 @@ body {
   .record-line { font-size: 13px; }
   .attendance-times { padding: 9px 10px; }
   .time-value { font-size: 14px; }
+  .admin-filters { flex-direction: column; }
+  .toolbar-select { flex: 1 1 auto; width: 100%; }
+  .mode-toggle { width: 100%; }
+  .mode-btn { flex: 1; }
 }
