@@ -136,35 +136,32 @@
 
       <section class="tab-panel active" id="panel-history">
         <div class="card">
-          <div class="card-toolbar">
-            <div class="card-toolbar-title">
-              <h2>Lịch sử chấm công</h2>
-              <p class="subtitle" id="historySubtitle">Theo ngày</p>
+          <div class="history-header">
+            <div class="history-title">
+              <h2>Chấm công</h2>
+              <p class="subtitle" id="historySubtitle">Hôm nay</p>
             </div>
-            <div class="toolbar-actions">
-              <input type="date" id="adminDate" class="toolbar-date" />
-              <button class="btn btn-icon" id="btnReloadHistory" title="Tải lại">🔄</button>
+            <div class="segmented">
+              <button type="button" class="mode-btn active" data-mode="day">Ngày</button>
+              <button type="button" class="mode-btn" data-mode="month">Tháng</button>
             </div>
           </div>
 
-          <div class="admin-filters">
-            <select id="adminFilterEmp" class="toolbar-select">
+          <div class="history-filters">
+            <input type="date" id="adminDate" class="input-compact" />
+            <select id="adminFilterEmp" class="input-compact select-flex">
               <option value="">👤 Tất cả nhân viên</option>
             </select>
-            <div class="mode-toggle">
-              <button type="button" class="mode-btn active" data-mode="day">📍 Ngày</button>
-              <button type="button" class="mode-btn" data-mode="month">📅 Tháng</button>
-            </div>
+            <button class="btn btn-icon btn-icon-compact" id="btnReloadHistory" title="Tải lại">🔄</button>
           </div>
+
+          <div class="stats-bar" id="historyStats" style="display:none;"></div>
 
           <div id="alertAdmin" class="alert"></div>
-          <div id="historyList" class="data-list">
+
+          <div id="historyList" class="attendance-list">
             <p class="empty">Chọn ngày để xem lịch sử.</p>
           </div>
-
-          <button class="btn btn-danger btn-block" id="btnBulkDelete" style="display:none;margin-top:14px;">
-            🗑 Xoá tất cả ngày này
-          </button>
         </div>
       </section>
 
@@ -216,7 +213,6 @@
   <span class="toast-text" id="toastText"></span>
 </div>
 
-<!-- Input file ẩn — dùng native camera -->
 <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none" />
 
 </body>
