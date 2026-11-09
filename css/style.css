@@ -439,6 +439,15 @@ body {
 .ts-day-cell.readonly, .ts-ot-cell.readonly { cursor: default; }
 .ts-day-cell.readonly.has-complaint, .ts-ot-cell.readonly.has-complaint { cursor: pointer; }
 
+/* Khoảng phân cách giữa 2 nửa tháng */
+.ts-split-gap {
+  height: 8px;
+  background: var(--bg);
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  margin: 0;
+}
+
 /* Footer */
 .ts-compact-footer {
   padding: 10px 16px;
