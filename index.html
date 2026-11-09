@@ -139,7 +139,7 @@
           <div class="card-toolbar">
             <div class="card-toolbar-title">
               <h2>Lịch sử chấm công</h2>
-              <p class="subtitle">Theo ngày</p>
+              <p class="subtitle" id="historySubtitle">Theo ngày</p>
             </div>
             <div class="toolbar-actions">
               <input type="date" id="adminDate" class="toolbar-date" />
@@ -147,10 +147,24 @@
             </div>
           </div>
 
+          <div class="admin-filters">
+            <select id="adminFilterEmp" class="toolbar-select">
+              <option value="">👤 Tất cả nhân viên</option>
+            </select>
+            <div class="mode-toggle">
+              <button type="button" class="mode-btn active" data-mode="day">📍 Ngày</button>
+              <button type="button" class="mode-btn" data-mode="month">📅 Tháng</button>
+            </div>
+          </div>
+
           <div id="alertAdmin" class="alert"></div>
           <div id="historyList" class="data-list">
             <p class="empty">Chọn ngày để xem lịch sử.</p>
           </div>
+
+          <button class="btn btn-danger btn-block" id="btnBulkDelete" style="display:none;margin-top:14px;">
+            🗑 Xoá tất cả ngày này
+          </button>
         </div>
       </section>
 
@@ -195,7 +209,7 @@
   </main>
 </div>
 
-<!-- ============ FLOATING TOAST (thay loading overlay) ============ -->
+<!-- ============ FLOATING TOAST ============ -->
 <div class="floating-toast" id="floatingToast">
   <span class="toast-spinner" id="toastSpinner"></span>
   <span class="toast-icon" id="toastIcon"></span>
