@@ -1,5 +1,5 @@
 /* =========================================================
-   TIMESHEET — Bảng công tháng + Complaints (Split 15 days)
+   TIMESHEET — Bảng công tháng + Complaints (Fixed Jumping)
    ========================================================= */
 
 let _tsAdminYear  = new Date().getFullYear();
@@ -76,7 +76,7 @@ function _renderTsGridPart(startDay, endDay, isAdmin, isCurrentMonth) {
 }
 
 /* =========================================================
-   ADMIN — LOAD
+   ADMIN — LOAD & RENDER GRID
    ========================================================= */
 async function loadAdminTimesheet() {
   const wrap = $('tsAdminGrid');
@@ -87,6 +87,7 @@ async function loadAdminTimesheet() {
 
   if (!_tsAdminEmpId) {
     wrap.innerHTML = '<p style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;">Chọn nhân viên để xem bảng công.</p>';
+    const panel = $('tsAdminPanel'); if (panel) panel.innerHTML = '';
     return;
   }
 
@@ -134,7 +135,6 @@ async function loadAdminTimesheet() {
   }
 }
 
-/* ========== ADMIN — RENDER GRID ========== */
 function renderAdminTimesheetGrid() {
   const wrap = $('tsAdminGrid');
   const days = _tsDaysInMonth(_tsAdminYear, _tsAdminMonth);
@@ -152,15 +152,13 @@ function renderAdminTimesheetGrid() {
 
   let html = '<div class="ts-compact-wrap">';
   
-  // Header totals
   html += `<div class="ts-compact-header">
     <span>Tổng: <span style="color: var(--primary); font-weight: 700;">${_tsFmtNum(totalWork)}</span> NC</span>
     <span>OT: <span style="color: var(--warning); font-weight: 700;">${_tsFmtNum(totalOT)}</span> giờ</span>
   </div>`;
 
-  // Chia làm 2 phần: 1-15 và 16-hết tháng
   html += _renderTsGridPart(1, 15, true, isCurrentMonth);
-  html += '<div class="ts-split-gap"></div>'; // Đường phân cách
+  html += '<div class="ts-split-gap"></div>'; 
   html += _renderTsGridPart(16, days, true, isCurrentMonth);
 
   html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
@@ -179,27 +177,38 @@ function renderAdminTimesheetGrid() {
   }
 }
 
-/* ========== ADMIN — PANEL ========== */
+/* ========== ADMIN — PANEL (ĐÃ FIX GIẬT TRANG) ========== */
 async function openAdminTimesheetPanel(dateStr) {
   if (!_tsAdminEmpId) return;
+  
+  // 1. Cập nhật giao diện chọn ô (Không vẽ lại toàn bộ bảng)
+  document.querySelectorAll('.ts-day-cell.selected, .ts-ot-cell.selected').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll(`.ts-day-cell[data-date="${dateStr}"], .ts-ot-cell[data-date="${dateStr}"]`).forEach(el => el.classList.add('selected'));
+  
   _tsAdminSelected = dateStr;
-  renderAdminTimesheetGrid();
 
   const panel = $('tsAdminPanel');
   if (!panel) return;
 
-  panel.innerHTML = `
-    <div class="ts-panel">
-      <div class="ts-panel-header">
-        <div class="ts-panel-title">${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}</div>
-        <button class="ts-panel-close" id="tsPanelClose" type="button">✕</button>
+  // 2. Tạo khung Panel 1 lần duy nhất (nếu chưa có), giữ cố định chiều cao
+  if (!panel.querySelector('.ts-panel')) {
+    panel.innerHTML = `
+      <div class="ts-panel">
+        <div class="ts-panel-header">
+          <div class="ts-panel-title" id="tsPanelTitle"></div>
+          <button class="ts-panel-close" id="tsPanelClose" type="button">✕</button>
+        </div>
+        <div class="ts-panel-body" id="tsPanelBody"></div>
       </div>
-      <div class="ts-panel-body">
-        <div style="text-align:center;padding:20px;color:var(--text-muted);">⏳ Đang tải...</div>
-      </div>
-    </div>
-  `;
-  $('tsPanelClose').onclick = closeAdminTimesheetPanel;
+    `;
+    $('tsPanelClose').onclick = closeAdminTimesheetPanel;
+  }
+
+  $('tsPanelTitle').textContent = `${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}`;
+  
+  // 3. Hiện trạng thái loading bên trong Body (không xoá Panel)
+  const body = $('tsPanelBody');
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">⏳ Đang tải...</div>';
 
   try {
     const { data, error } = await supabaseClient
@@ -209,29 +218,31 @@ async function openAdminTimesheetPanel(dateStr) {
       .eq('work_date', dateStr)
       .order('created_at', { ascending: true });
     if (error) throw error;
+    
     _tsAdminComplaints = data || [];
     renderAdminPanelBody();
-    setTimeout(() => {
-      document.querySelector('.ts-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
+    
   } catch (err) {
     console.error('openAdminTimesheetPanel:', err);
-    panel.querySelector('.ts-panel-body').innerHTML =
-      `<p style="color:var(--error);text-align:center;">Lỗi tải phản ánh: ${escapeHtml(err.message)}</p>`;
+    body.innerHTML = `<p style="color:var(--error);text-align:center;">Lỗi tải phản ánh: ${escapeHtml(err.message)}</p>`;
   }
 }
 
 function closeAdminTimesheetPanel() {
   _tsAdminSelected = null;
   _tsAdminComplaints = [];
+  
+  // Bỏ chọn trên lưới
+  document.querySelectorAll('.ts-day-cell.selected, .ts-ot-cell.selected').forEach(el => el.classList.remove('selected'));
+  
+  // Xoá panel
   const panel = $('tsAdminPanel');
   if (panel) panel.innerHTML = '';
-  renderAdminTimesheetGrid();
 }
 
 function renderAdminPanelBody() {
-  const panel = $('tsAdminPanel');
-  if (!panel || !_tsAdminSelected) return;
+  const body = $('tsPanelBody');
+  if (!body || !_tsAdminSelected) return;
 
   const dateStr = _tsAdminSelected;
   const data = _tsAdminData[dateStr] || {};
@@ -239,50 +250,41 @@ function renderAdminPanelBody() {
   const ot = data.overtime_hours ?? 0;
   const complaints = _tsAdminComplaints;
 
-  panel.innerHTML = `
-    <div class="ts-panel">
-      <div class="ts-panel-header">
-        <div class="ts-panel-title">${_tsDowFull(dateStr)}, ${formatDateVN(dateStr)}</div>
-        <button class="ts-panel-close" id="tsPanelClose" type="button">✕</button>
+  body.innerHTML = `
+    <div class="ts-inputs">
+      <div class="field">
+        <label for="tsWorkDays">Ngày công (0 – 1)</label>
+        <input type="number" id="tsWorkDays" min="0" max="1" step="0.5" value="${workDays}" />
       </div>
-      <div class="ts-panel-body">
-        <div class="ts-inputs">
-          <div class="field">
-            <label for="tsWorkDays">Ngày công (0 – 1)</label>
-            <input type="number" id="tsWorkDays" min="0" max="1" step="0.5" value="${workDays}" />
-          </div>
-          <div class="field">
-            <label for="tsOT">Tăng ca (giờ)</label>
-            <input type="number" id="tsOT" min="0" step="0.5" value="${ot}" />
-          </div>
-        </div>
-        <button class="ts-save-btn" id="tsSaveData" type="button">💾 Lưu số liệu</button>
-        <div class="ts-complaints-header">
-          <div class="ts-complaints-title">Phản ánh</div>
-          <span class="ts-complaints-count${complaints.length === 0 ? ' zero' : ''}">${complaints.length}</span>
-        </div>
-        <div id="tsComplaintList"></div>
-        <div class="ts-add-form">
-          <div class="field-row">
-            <div class="field">
-              <label for="tsReporter">Người phản ánh *</label>
-              <input type="text" id="tsReporter" placeholder="Tên người" />
-            </div>
-            <div class="field">
-              <label for="tsArea">Khu vực</label>
-              <input type="text" id="tsArea" placeholder="Khu A, B..." />
-            </div>
-          </div>
-          <div class="field">
-            <label for="tsContent">Nội dung *</label>
-            <textarea id="tsContent" placeholder="Mô tả phản ánh..."></textarea>
-          </div>
-          <button class="ts-add-btn" id="tsAddComplaint" type="button">+ Thêm phản ánh</button>
-        </div>
+      <div class="field">
+        <label for="tsOT">Tăng ca (giờ)</label>
+        <input type="number" id="tsOT" min="0" step="0.5" value="${ot}" />
       </div>
     </div>
+    <button class="ts-save-btn" id="tsSaveData" type="button">💾 Lưu số liệu</button>
+    <div class="ts-complaints-header">
+      <div class="ts-complaints-title">Phản ánh</div>
+      <span class="ts-complaints-count${complaints.length === 0 ? ' zero' : ''}">${complaints.length}</span>
+    </div>
+    <div id="tsComplaintList"></div>
+    <div class="ts-add-form">
+      <div class="field-row">
+        <div class="field">
+          <label for="tsReporter">Người phản ánh *</label>
+          <input type="text" id="tsReporter" placeholder="Tên người" />
+        </div>
+        <div class="field">
+          <label for="tsArea">Khu vực</label>
+          <input type="text" id="tsArea" placeholder="Khu A, B..." />
+        </div>
+      </div>
+      <div class="field">
+        <label for="tsContent">Nội dung *</label>
+        <textarea id="tsContent" placeholder="Mô tả phản ánh..."></textarea>
+      </div>
+      <button class="ts-add-btn" id="tsAddComplaint" type="button">+ Thêm phản ánh</button>
+    </div>
   `;
-  $('tsPanelClose').onclick = closeAdminTimesheetPanel;
   $('tsSaveData').onclick = saveAdminTimesheetData;
   $('tsAddComplaint').onclick = addAdminComplaint;
   renderAdminComplaintList();
@@ -348,8 +350,12 @@ async function saveAdminTimesheetData() {
     _tsAdminData[_tsAdminSelected].work_days = wd;
     _tsAdminData[_tsAdminSelected].overtime_hours = ot;
 
-    renderAdminTimesheetGrid();
-    renderAdminPanelBody();
+    renderAdminTimesheetGrid(); // Cập nhật lại số tổng trên cùng
+    renderAdminPanelBody();     // Cập nhật lại input
+    
+    // Set lại class selected sau khi render grid
+    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
+    
     showToast('Đã lưu số liệu', 'success');
   } catch (err) {
     console.error('saveAdminTimesheetData:', err);
@@ -393,6 +399,8 @@ async function addAdminComplaint() {
 
     renderAdminTimesheetGrid();
     renderAdminPanelBody();
+    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
+    
     showToast('Đã thêm phản ánh', 'success');
   } catch (err) {
     console.error('addAdminComplaint:', err);
@@ -413,8 +421,11 @@ async function deleteAdminComplaint(id) {
       _tsAdminData[_tsAdminSelected].complaint_count =
         Math.max(0, (_tsAdminData[_tsAdminSelected].complaint_count || 0) - 1);
     }
+    
     renderAdminTimesheetGrid();
     renderAdminPanelBody();
+    document.querySelectorAll(`.ts-day-cell[data-date="${_tsAdminSelected}"], .ts-ot-cell[data-date="${_tsAdminSelected}"]`).forEach(el => el.classList.add('selected'));
+    
     showToast('Đã xoá phản ánh', 'success');
   } catch (err) {
     console.error('deleteAdminComplaint:', err);
@@ -492,15 +503,13 @@ function renderUserTimesheetGrid() {
 
   let html = '<div class="ts-compact-wrap">';
   
-  // Header totals
   html += `<div class="ts-compact-header">
     <span>Tổng: <span style="color: var(--primary); font-weight: 700;">${_tsFmtNum(totalWork)}</span> NC</span>
     <span>OT: <span style="color: var(--warning); font-weight: 700;">${_tsFmtNum(totalOT)}</span> giờ</span>
   </div>`;
 
-  // Chia làm 2 phần: 1-15 và 16-hết tháng
   html += _renderTsGridPart(1, 15, false, isCurrentMonth);
-  html += '<div class="ts-split-gap"></div>'; // Đường phân cách
+  html += '<div class="ts-split-gap"></div>'; 
   html += _renderTsGridPart(16, days, false, isCurrentMonth);
 
   html += `<div class="ts-compact-footer">Xuất lúc ${_tsNowString()} · NC = Ngày công (8h) · OT = Tăng ca</div>`;
