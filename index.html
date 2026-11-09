@@ -118,11 +118,21 @@
 <div id="screen-admin" class="screen">
   <header class="app-header">
     <div class="container">
-      <div class="app-brand">
-        <div class="brand-mark-sm">USSH</div>
-        <div>
-          <strong>Quản trị</strong>
-          <small>Sky One</small>
+      <div class="app-menu-wrapper">
+        <button class="app-menu-btn" id="btnAppMenu" type="button" aria-haspopup="menu" aria-expanded="false">
+          <span class="brand-mark-sm">USSH</span>
+          <span class="app-menu-label" id="appMenuLabel">Chấm công</span>
+          <span class="app-menu-caret" aria-hidden="true">▼</span>
+        </button>
+        <div class="app-menu-dropdown" id="appMenuDropdown" role="menu">
+          <button class="app-menu-item active" type="button" data-tab="history" role="menuitem">
+            <span class="menu-icon">📋</span>
+            <span>Chấm công</span>
+          </button>
+          <button class="app-menu-item" type="button" data-tab="users" role="menuitem">
+            <span class="menu-icon">👥</span>
+            <span>Nhân viên</span>
+          </button>
         </div>
       </div>
       <div class="app-user">
@@ -131,13 +141,6 @@
       </div>
     </div>
   </header>
-
-  <nav class="app-tabs">
-    <div class="container">
-      <button class="tab active" data-tab="history">Chấm công</button>
-      <button class="tab" data-tab="users">Nhân viên</button>
-    </div>
-  </nav>
 
   <main class="app-main">
     <div class="container">
