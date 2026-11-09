@@ -1,7 +1,3 @@
-/* =========================================================
-   STORAGE + LOGIN
-   ========================================================= */
-
 /* ========== SESSION STORAGE ========== */
 function saveEmployeeSession(emp, password) {
   const base = {
@@ -68,7 +64,7 @@ function loadRememberedLogin() {
 }
 function clearRememberedLogin() { localStorage.removeItem(REMEMBER_KEY); }
 
-/* ========== LOGIN FLOW ========== */
+/* ========== LOGIN ========== */
 function initLoginForm() {
   const loginForm  = $('loginForm');
   const loginAlert = $('loginAlert');
@@ -98,7 +94,7 @@ function initLoginForm() {
     btnLogin.textContent = 'Đang đăng nhập...';
 
     try {
-      // 1) Thử nhân viên trước
+      // 1) Thử nhân viên
       const { data: empRows, error: empErr } = await supabaseClient.rpc('verify_employee', {
         p_username: rawUsername,
         p_password: password,
@@ -120,7 +116,7 @@ function initLoginForm() {
         $('loginPassword').value = '';
         if (!remember) loginForm.reset();
 
-        await openEmployeeDashboard(emp);
+        await openEmployeeScreen(emp);
         return;
       }
 
@@ -145,7 +141,7 @@ function initLoginForm() {
           $('loginPassword').value = '';
           if (!remember) loginForm.reset();
 
-          await openAdminDashboard(authData.user.email);
+          await openAdminScreen(authData.user.email);
           return;
         }
         await supabaseClient.auth.signOut();
