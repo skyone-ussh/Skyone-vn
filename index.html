@@ -195,14 +195,11 @@
   </main>
 </div>
 
-<!-- ============ LOADING OVERLAY (thay modal cũ) ============ -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-box">
-    <div class="spinner"></div>
-    <p class="loading-text" id="loadingText">Đang xử lý...</p>
-    <p class="loading-sub" id="loadingSub">Vui lòng không tắt trình duyệt</p>
-    <button class="btn btn-outline btn-sm" id="btnCancelLoading">Huỷ</button>
-  </div>
+<!-- ============ FLOATING TOAST (thay loading overlay) ============ -->
+<div class="floating-toast" id="floatingToast">
+  <span class="toast-spinner" id="toastSpinner"></span>
+  <span class="toast-icon" id="toastIcon"></span>
+  <span class="toast-text" id="toastText"></span>
 </div>
 
 <!-- Input file ẩn — dùng native camera -->
