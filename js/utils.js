@@ -32,15 +32,35 @@ function escapeHtml(s) {
   }[m]));
 }
 
-/**
- * Nén ảnh trước khi upload: max 1200px, JPEG 0.8
- */
-async function compressImage(file, maxDim = 1200, quality = 0.8) {
+/* =========================================================
+   WEBP SUPPORT DETECTION (cache 1 lần)
+   ========================================================= */
+let _webpSupport = null;
+function supportsWebP() {
+  if (_webpSupport !== null) return _webpSupport;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    _webpSupport = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+  } catch {
+    _webpSupport = false;
+  }
+  return _webpSupport;
+}
+
+/* =========================================================
+   COMPRESS IMAGE — tối ưu: 800px + WebP 0.7
+   → ~40-80KB (thay vì 200-300KB như trước)
+   ========================================================= */
+async function compressImage(file, maxDim = 800, quality = 0.7) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+
     img.onload = () => {
       URL.revokeObjectURL(url);
+
       let { width, height } = img;
       if (width > height && width > maxDim) {
         height = Math.round((height * maxDim) / width);
@@ -49,34 +69,50 @@ async function compressImage(file, maxDim = 1200, quality = 0.8) {
         width = Math.round((width * maxDim) / height);
         height = maxDim;
       }
+
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingQuality = 'medium'; // nhanh hơn 'high', chất lượng đủ tốt
       ctx.drawImage(img, 0, 0, width, height);
+
+      const mimeType = supportsWebP() ? 'image/webp' : 'image/jpeg';
+
       canvas.toBlob(blob => {
-        if (blob) resolve(blob);
-        else reject(new Error('Không nén được ảnh.'));
-      }, 'image/jpeg', quality);
+        if (blob) {
+          // blob.type sẽ là mimeType đã dùng
+          resolve(blob);
+        } else {
+          reject(new Error('Không nén được ảnh.'));
+        }
+      }, mimeType, quality);
     };
+
     img.onerror = () => {
       URL.revokeObjectURL(url);
       reject(new Error('Không đọc được file ảnh.'));
     };
+
     img.src = url;
   });
 }
 
-/**
- * Upload ảnh lên Supabase Storage. Trả về public URL.
- */
+/* =========================================================
+   UPLOAD PHOTO — cache control 1 năm, giữ định dạng gốc
+   ========================================================= */
 async function uploadPhoto(blob, username, type) {
   const date = todayISO();
-  const path = `${username}/${date}/${type}-${Date.now()}.jpg`;
+  const ext = (blob.type || '').includes('webp') ? 'webp' : 'jpg';
+  const path = `${username}/${date}/${type}-${Date.now()}.${ext}`;
 
   const { data, error } = await supabaseClient.storage
     .from(PHOTO_BUCKET)
-    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    .upload(path, blob, {
+      contentType: blob.type || 'image/jpeg',
+      upsert: false,
+      cacheControl: '31536000', // 1 năm — CDN cache tốt hơn
+    });
 
   if (error) throw error;
 
@@ -87,11 +123,9 @@ async function uploadPhoto(blob, username, type) {
   return urlData.publicUrl;
 }
 
-/**
- * Trích xuất storage path từ public URL.
- * VD: https://xxx.supabase.co/storage/v1/object/public/attendance-photos/user/2026-11-09/checkin-123.jpg
- *     → user/2026-11-09/checkin-123.jpg
- */
+/* =========================================================
+   TRÍCH XUẤT STORAGE PATH TỪ PUBLIC URL
+   ========================================================= */
 function extractStoragePath(publicUrl) {
   if (!publicUrl) return null;
   const marker = `/${PHOTO_BUCKET}/`;
